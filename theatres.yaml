@@ -1,0 +1,482 @@
+# Master list of London theatres scraped by Theatre Scout.
+# Slugs are stable identifiers — never change one once an adapter exists.
+
+# --- Major producing houses & flagship Off-West End (18) ---
+- slug: almeida
+  name: Almeida Theatre
+  area: Islington
+  postcode_prefix: N1
+  category: major
+  url: https://almeida.co.uk
+
+- slug: bridge-theatre
+  name: Bridge Theatre
+  area: Tower Bridge
+  postcode_prefix: SE1
+  category: major
+  url: https://bridgetheatre.co.uk
+
+- slug: bush
+  name: Bush Theatre
+  area: Shepherd's Bush
+  postcode_prefix: W12
+  category: major
+  url: https://bushtheatre.co.uk
+
+- slug: donmar-warehouse
+  name: Donmar Warehouse
+  area: Covent Garden
+  postcode_prefix: WC2
+  category: major
+  url: https://donmarwarehouse.com
+
+- slug: hampstead
+  name: Hampstead Theatre
+  area: Swiss Cottage
+  postcode_prefix: NW3
+  category: major
+  url: https://hampsteadtheatre.com
+
+- slug: kiln
+  name: Kiln Theatre
+  area: Kilburn
+  postcode_prefix: NW6
+  category: major
+  url: https://kilntheatre.com
+
+- slug: lyric-hammersmith
+  name: Lyric Hammersmith
+  area: Hammersmith
+  postcode_prefix: W6
+  category: major
+  url: https://lyric.co.uk
+
+- slug: menier-chocolate-factory
+  name: Menier Chocolate Factory
+  area: Southwark
+  postcode_prefix: SE1
+  category: major
+  url: https://menierchocolatefactory.com
+
+- slug: national-theatre
+  name: National Theatre
+  area: South Bank
+  postcode_prefix: SE1
+  category: major
+  url: https://nationaltheatre.org.uk
+
+- slug: old-vic
+  name: Old Vic
+  area: Waterloo
+  postcode_prefix: SE1
+  category: major
+  url: https://oldvictheatre.com
+
+- slug: open-air-theatre
+  name: Open Air Theatre
+  area: Regent's Park
+  postcode_prefix: NW1
+  category: major
+  url: https://openairtheatre.com
+
+- slug: orange-tree
+  name: Orange Tree Theatre
+  area: Richmond
+  postcode_prefix: TW9
+  category: major
+  url: https://orangetreetheatre.co.uk
+
+- slug: royal-court
+  name: Royal Court Theatre
+  area: Sloane Square
+  postcode_prefix: SW1
+  category: major
+  url: https://royalcourttheatre.com
+
+- slug: sadlers-wells
+  name: Sadler's Wells
+  area: Islington
+  postcode_prefix: EC1
+  category: major
+  url: https://sadlerswells.com
+
+- slug: shakespeares-globe
+  name: Shakespeare's Globe
+  area: Bankside
+  postcode_prefix: SE1
+  category: major
+  url: https://shakespearesglobe.com
+
+- slug: soho-theatre
+  name: Soho Theatre
+  area: Soho
+  postcode_prefix: W1
+  category: major
+  url: https://sohotheatre.com
+
+- slug: theatre-royal-stratford-east
+  name: Theatre Royal Stratford East
+  area: Stratford
+  postcode_prefix: E15
+  category: major
+  url: https://stratfordeast.com
+
+- slug: young-vic
+  name: Young Vic
+  area: Waterloo
+  postcode_prefix: SE1
+  category: major
+  url: https://youngvic.org
+
+# --- Mid-sized & specialist venues (19) ---
+- slug: arcola
+  name: Arcola Theatre
+  area: Dalston
+  postcode_prefix: E8
+  category: mid
+  url: https://arcolatheatre.com
+
+- slug: barbican
+  name: Barbican Centre
+  area: Barbican
+  postcode_prefix: EC2
+  category: mid
+  url: https://barbican.org.uk
+
+- slug: brixton-house
+  name: Brixton House
+  area: Brixton
+  postcode_prefix: SW9
+  category: mid
+  url: https://brixtonhouse.co.uk
+
+- slug: charing-cross
+  name: Charing Cross Theatre
+  area: Charing Cross
+  postcode_prefix: WC2
+  category: mid
+  url: https://charingcrosstheatre.co.uk
+
+- slug: coronet
+  name: Coronet Theatre
+  area: Notting Hill
+  postcode_prefix: W11
+  category: mid
+  url: https://thecoronettheatre.com
+
+- slug: gate
+  name: Gate Theatre
+  area: Camden
+  postcode_prefix: NW1
+  category: mid
+  url: https://gatetheatre.co.uk
+
+- slug: hackney-empire
+  name: Hackney Empire
+  area: Hackney
+  postcode_prefix: E8
+  category: mid
+  url: https://hackneyempire.co.uk
+
+- slug: marylebone
+  name: Marylebone Theatre
+  area: Marylebone
+  postcode_prefix: NW1
+  category: mid
+  url: https://marylebonetheatre.com
+
+- slug: new-diorama
+  name: New Diorama Theatre
+  area: Regent's Place
+  postcode_prefix: NW1
+  category: mid
+  url: https://newdiorama.com
+
+- slug: park-theatre
+  name: Park Theatre
+  area: Finsbury Park
+  postcode_prefix: N4
+  category: mid
+  url: https://parktheatre.co.uk
+
+- slug: pleasance
+  name: Pleasance Theatre London
+  area: Islington
+  postcode_prefix: N7
+  category: mid
+  url: https://pleasance.co.uk
+
+- slug: riverside-studios
+  name: Riverside Studios
+  area: Hammersmith
+  postcode_prefix: W6
+  category: mid
+  url: https://riversidestudios.co.uk
+
+- slug: roundhouse
+  name: Roundhouse
+  area: Camden
+  postcode_prefix: NW1
+  category: mid
+  url: https://roundhouse.org.uk
+
+- slug: seven-dials-playhouse
+  name: Seven Dials Playhouse
+  area: Covent Garden
+  postcode_prefix: WC2
+  category: mid
+  url: https://sevendialsplayhouse.co.uk
+
+- slug: other-palace
+  name: The Other Palace
+  area: Victoria
+  postcode_prefix: SW1
+  category: mid
+  url: https://theotherpalace.co.uk
+
+- slug: yard
+  name: The Yard Theatre
+  area: Hackney Wick
+  postcode_prefix: E9
+  category: mid
+  url: https://theyardtheatre.co.uk
+
+- slug: underbelly-boulevard
+  name: Underbelly Boulevard
+  area: Soho
+  postcode_prefix: W1
+  category: mid
+  url: https://underbellyboulevard.com
+
+- slug: unicorn
+  name: Unicorn Theatre
+  area: London Bridge
+  postcode_prefix: SE1
+  category: mid
+  url: https://unicorntheatre.com
+
+- slug: wiltons
+  name: Wilton's Music Hall
+  area: Whitechapel
+  postcode_prefix: E1
+  category: mid
+  url: https://wiltons.org.uk
+
+# --- Fringe & pub theatres (19) ---
+- slug: camden-peoples
+  name: Camden People's Theatre
+  area: Euston
+  postcode_prefix: NW1
+  category: fringe
+  url: https://cptheatre.co.uk
+
+- slug: cockpit
+  name: Cockpit Theatre
+  area: Marylebone
+  postcode_prefix: NW8
+  category: fringe
+  url: https://thecockpit.org.uk
+
+- slug: drayton-arms
+  name: Drayton Arms Theatre
+  area: South Kensington
+  postcode_prefix: SW5
+  category: fringe
+  url: https://thedraytonarmstheatre.co.uk
+
+- slug: etcetera
+  name: Etcetera Theatre
+  area: Camden
+  postcode_prefix: NW1
+  category: fringe
+  url: https://etceteratheatre.com
+
+- slug: finborough
+  name: Finborough Theatre
+  area: Earl's Court
+  postcode_prefix: SW10
+  category: fringe
+  url: https://finboroughtheatre.co.uk
+
+- slug: hen-and-chickens
+  name: Hen & Chickens Theatre
+  area: Highbury
+  postcode_prefix: N1
+  category: fringe
+  url: https://henandchickens.com
+
+- slug: jermyn-street
+  name: Jermyn Street Theatre
+  area: St James's
+  postcode_prefix: SW1
+  category: fringe
+  url: https://jermynstreettheatre.co.uk
+
+- slug: kings-head
+  name: King's Head Theatre
+  area: Islington
+  postcode_prefix: N1
+  category: fringe
+  url: https://kingsheadtheatre.com
+
+- slug: old-red-lion
+  name: Old Red Lion Theatre
+  area: Angel
+  postcode_prefix: EC1
+  category: fringe
+  url: https://oldredliontheatre.co.uk
+
+- slug: omnibus
+  name: Omnibus Theatre
+  area: Clapham
+  postcode_prefix: SW4
+  category: fringe
+  url: https://omnibus-clapham.org
+
+- slug: southwark-playhouse
+  name: Southwark Playhouse
+  area: Southwark
+  postcode_prefix: SE1
+  category: fringe
+  url: https://southwarkplayhouse.co.uk
+
+- slug: tabard
+  name: Tabard Theatre
+  area: Chiswick
+  postcode_prefix: W4
+  category: fringe
+  url: https://tabardtheatre.co.uk
+
+- slug: tara
+  name: Tara Theatre
+  area: Earlsfield
+  postcode_prefix: SW18
+  category: fringe
+  url: https://taratheatre.com
+
+- slug: vaults
+  name: The Vaults
+  area: Waterloo
+  postcode_prefix: SE1
+  category: fringe
+  url: https://thevaults.london
+
+- slug: tower
+  name: Tower Theatre
+  area: Stoke Newington
+  postcode_prefix: N16
+  category: fringe
+  url: https://towertheatre.org.uk
+
+- slug: union
+  name: Union Theatre
+  area: Southwark
+  postcode_prefix: SE1
+  category: fringe
+  url: https://uniontheatre.biz
+
+- slug: upstairs-at-the-gatehouse
+  name: Upstairs at the Gatehouse
+  area: Highgate
+  postcode_prefix: N6
+  category: fringe
+  url: https://upstairsatthegatehouse.com
+
+- slug: waterloo-east
+  name: Waterloo East Theatre
+  area: Waterloo
+  postcode_prefix: SE1
+  category: fringe
+  url: https://waterlooeast.co.uk
+
+- slug: white-bear
+  name: White Bear Theatre
+  area: Kennington
+  postcode_prefix: SE11
+  category: fringe
+  url: https://whitebeartheatre.co.uk
+
+# --- Outer London receiving houses & large-scale venues (12) ---
+- slug: alexandra-palace
+  name: Alexandra Palace Theatre
+  area: Wood Green
+  postcode_prefix: N22
+  category: outer
+  url: https://alexandrapalace.com
+
+- slug: bloomsbury
+  name: Bloomsbury Theatre
+  area: Bloomsbury
+  postcode_prefix: WC1
+  category: outer
+  url: https://thebloomsbury.com
+
+- slug: churchill
+  name: Churchill Theatre
+  area: Bromley
+  postcode_prefix: BR1
+  category: outer
+  url: https://churchilltheatre.co.uk
+
+- slug: eventim-apollo
+  name: Eventim Apollo
+  area: Hammersmith
+  postcode_prefix: W6
+  category: outer
+  url: https://eventimapollo.com
+
+- slug: greenwich
+  name: Greenwich Theatre
+  area: Greenwich
+  postcode_prefix: SE10
+  category: outer
+  url: https://greenwichtheatre.org.uk
+
+- slug: new-wimbledon
+  name: New Wimbledon Theatre
+  area: Wimbledon
+  postcode_prefix: SW19
+  category: outer
+  url: https://www.atgtickets.com/venues/new-wimbledon-theatre/
+
+- slug: polka
+  name: Polka Theatre
+  area: Wimbledon
+  postcode_prefix: SW19
+  category: outer
+  url: https://polkatheatre.com
+
+- slug: queens-hornchurch
+  name: Queen's Theatre Hornchurch
+  area: Hornchurch
+  postcode_prefix: RM11
+  category: outer
+  url: https://queens-theatre.co.uk
+
+- slug: richmond
+  name: Richmond Theatre
+  area: Richmond
+  postcode_prefix: TW9
+  category: outer
+  url: https://www.atgtickets.com/venues/richmond-theatre/
+
+- slug: rose-kingston
+  name: Rose Theatre
+  area: Kingston
+  postcode_prefix: KT1
+  category: outer
+  url: https://rosetheatre.org
+
+- slug: troubadour-canary-wharf
+  name: Troubadour Canary Wharf
+  area: Canary Wharf
+  postcode_prefix: E14
+  category: outer
+  url: https://troubadour.com
+
+- slug: troubadour-wembley-park
+  name: Troubadour Wembley Park
+  area: Wembley Park
+  postcode_prefix: HA9
+  category: outer
+  url: https://troubadour.com

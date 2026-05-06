@@ -2,7 +2,7 @@
 
 ## What this is
 
-A local Python app that scrapes the websites of ~67 London theatres outside the West End and builds a searchable directory of current and upcoming productions — plays, musicals, comedy, dance, opera, family shows. The directory is browseable via a small local web UI; scrapes are triggered manually from the CLI or with a "refresh" button in the UI.
+A local Python app that scrapes the websites of 68 London theatres outside the West End and builds a searchable directory of current and upcoming productions — plays, musicals, comedy, dance, opera, family shows. The directory is browseable via a small local web UI; scrapes are triggered manually from the CLI or with a "refresh" button in the UI.
 
 ## Status
 
@@ -109,7 +109,7 @@ Full list lives in [`theatres.yaml`](theatres.yaml). Counts:
 
 - `major` — Major producing houses & flagship Off-West End: **18 theatres** (Almeida, Bridge, Bush, Donmar, Hampstead, Kiln, Lyric Hammersmith, Menier Chocolate Factory, National, Old Vic, Open Air, Orange Tree, Royal Court, Sadler's Wells, Shakespeare's Globe, Soho, Theatre Royal Stratford East, Young Vic)
 - `mid` — Mid-sized & specialist venues: **19 theatres** (Arcola, Barbican, Brixton House, Charing Cross, Coronet, Gate, Hackney Empire, Marylebone, New Diorama, Park, Pleasance, Riverside Studios, Roundhouse, Seven Dials Playhouse, The Other Palace, The Yard, Underbelly Boulevard, Unicorn, Wilton's Music Hall)
-- `fringe` — Fringe & pub theatres: **18 theatres** (Camden People's, Cockpit, Drayton Arms, Etcetera, Finborough, Hen & Chickens, Jermyn Street, King's Head, Old Red Lion, Omnibus, Southwark Playhouse, Tabard, Tara, The Vaults, Tower, Union, Upstairs at the Gatehouse, Waterloo East, White Bear)
+- `fringe` — Fringe & pub theatres: **19 theatres** (Camden People's, Cockpit, Drayton Arms, Etcetera, Finborough, Hen & Chickens, Jermyn Street, King's Head, Old Red Lion, Omnibus, Southwark Playhouse, Tabard, Tara, The Vaults, Tower, Union, Upstairs at the Gatehouse, Waterloo East, White Bear)
 - `outer` — Outer London receiving houses & large-scale venues: **12 theatres** (Alexandra Palace, Bloomsbury, Churchill, Eventim Apollo, Greenwich, New Wimbledon, Polka, Queen's Hornchurch, Richmond, Rose Kingston, Troubadour Canary Wharf, Troubadour Wembley Park)
 
 ## Adding a new theatre adapter

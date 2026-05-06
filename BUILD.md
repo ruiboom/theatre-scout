@@ -15,7 +15,7 @@ This is the execution companion to [`CLAUDE.md`](CLAUDE.md). CLAUDE.md is *what*
 | # | Name | Est. | Outcome |
 |---|---|---|---|
 | M0 | Project skeleton | 30 min | `pytest` runs; `scout --version` prints |
-| M1 | Theatre data + models | 1 h | `theatres.yaml` validates and loads into 67 `Theatre` objects |
+| M1 | Theatre data + models | 1 h | `theatres.yaml` validates and loads into 68 `Theatre` objects |
 | M2 | SQLite persistence | 1.5 h | `Show`/`Theatre`/`ScrapeRun` round-trip; re-insert dedupes |
 | M3 | HTTP layer | 1.5 h | Polite client: rate-limited, cached, robots-aware |
 | M4 | Adapter framework | 1 h | Registry + JSON-LD helper + `BaseAdapter` |
@@ -52,9 +52,9 @@ Framework + first adapter: ~12 h. Adapter rollout is its own ongoing thing (esti
 
 **Tests first** (`tests/test_theatres.py`):
 - yaml file loads
-- exactly 67 entries
+- exactly 68 entries
 - all slugs unique and kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`)
-- categories ∈ `{major, mid, fringe, outer}` with counts `{18, 19, 18, 12}`
+- categories ∈ `{major, mid, fringe, outer}` with counts `{18, 19, 19, 12}`
 - all `url` values are `https://`
 - `postcode_prefix` matches `^[A-Z]{1,2}\d{1,2}[A-Z]?$`
 
@@ -201,7 +201,7 @@ Framework + first adapter: ~12 h. Adapter rollout is its own ongoing thing (esti
 
 - `uv run pytest` green.
 - `uv run ruff check && uv run ruff format --check && uv run mypy scout` green.
-- All 67 adapters present, each with a fixture and parse test.
+- All 68 adapters present, each with a fixture and parse test.
 - `uv run scout scrape` completes a full run with ≥ 90% theatres in `success` status.
 - `uv run scout serve` serves a browseable, searchable directory.
 

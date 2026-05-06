@@ -82,7 +82,11 @@ def test_offers_extract_price_range_in_pence() -> None:
         """
         {
             "@type": "TheaterEvent", "name": "Priced", "url": "https://x.com/p",
-            "offers": {"@type": "AggregateOffer", "lowPrice": "12.50", "highPrice": "55", "priceCurrency": "GBP"}
+            "offers": {
+                "@type": "AggregateOffer",
+                "lowPrice": "12.50", "highPrice": "55",
+                "priceCurrency": "GBP"
+            }
         }
         """
     )

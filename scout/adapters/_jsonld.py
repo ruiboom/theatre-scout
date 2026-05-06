@@ -84,7 +84,7 @@ def _node_to_show(node: dict[str, Any], theatre_slug: str, base_url: str) -> Sho
             end_date=_parse_date(node.get("endDate")),
             price_min=_extract_price(node, "lowPrice") or _extract_price(node, "price"),
             price_max=_extract_price(node, "highPrice"),
-            image_url=_extract_image(node.get("image"), base_url),  # type: ignore[arg-type]
+            image_url=_extract_image(node.get("image"), base_url),
         )
     except Exception as exc:
         log.warning("jsonld: failed to build Show for %s: %s", name, exc)

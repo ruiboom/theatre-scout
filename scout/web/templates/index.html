@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Theatres · Theatre Scout{% endblock %}
+{% block content %}
+<h2>Theatres ({{ total_shows }} upcoming shows)</h2>
+{% for cat, label in [("major", "Major producing houses"), ("mid", "Mid-sized & specialist"), ("fringe", "Fringe & pub"), ("outer", "Outer London")] %}
+    <section class="category">
+        <h3>{{ label }} <small>({{ by_cat[cat] | length }})</small></h3>
+        <ul class="theatres">
+            {% for t in by_cat[cat] %}
+                <li>
+                    <a href="/theatres/{{ t.slug }}">{{ t.name }}</a>
+                    <span class="meta">{{ t.area }}, {{ t.postcode_prefix }}</span>
+                    <span class="count">{{ show_counts.get(t.slug, 0) }} shows</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endfor %}
+{% endblock %}

@@ -16,9 +16,8 @@ def _imports(path: Path) -> set[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             out.update(a.name for a in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                out.add(node.module)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            out.add(node.module)
     return out
 
 

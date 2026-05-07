@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ theatre.name }} · Theatre Scout{% endblock %}
+{% block content %}
+<p><a href="/">&larr; All theatres</a></p>
+<h2>{{ theatre.name }}</h2>
+<p class="meta">{{ theatre.area }} ({{ theatre.postcode_prefix }}) · <a href="{{ theatre.url }}" target="_blank" rel="noopener">{{ theatre.url }}</a></p>
+
+{% if shows %}
+    <ul class="shows">
+        {% for s in shows %}
+            <li>
+                <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
+                <span class="show-type">{{ s.show_type }}</span>
+                <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
+                {% if s.price_min %}<span class="price">{{ s.price_min | fmt_price }}{% if s.price_max %} – {{ s.price_max | fmt_price }}{% endif %}</span>{% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p><em>No shows scraped yet for this theatre. Hit Refresh to fetch.</em></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,81 @@
+:root {
+    --fg: #1a1a1a;
+    --muted: #666;
+    --link: #0049a3;
+    --bg: #fafaf7;
+    --border: #ddd;
+    --pill: #eef;
+}
+
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    margin: 0;
+    line-height: 1.4;
+}
+header {
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    background: white;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+header h1 {
+    font-size: 1.2rem;
+    margin: 0;
+}
+header h1 a { color: var(--fg); text-decoration: none; }
+nav { display: flex; gap: 1rem; align-items: center; }
+nav a { color: var(--link); text-decoration: none; }
+nav .inline { display: inline; margin: 0; }
+nav button {
+    border: 1px solid var(--border);
+    background: white;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+nav button:hover { background: var(--pill); }
+main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    color: var(--muted);
+    text-align: center;
+}
+
+.category { margin-bottom: 2rem; }
+.category h3 small { color: var(--muted); font-weight: normal; }
+
+ul.theatres, ul.shows { list-style: none; padding: 0; margin: 0; }
+ul.theatres li, ul.shows li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+ul.theatres li:last-child, ul.shows li:last-child { border-bottom: none; }
+ul.theatres a { color: var(--link); text-decoration: none; font-weight: 500; }
+.meta, .dates, .venue, .price {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+.count {
+    margin-left: auto;
+    background: var(--pill);
+    padding: 0.1rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+}
+.show-type {
+    background: var(--pill);
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-transform: lowercase;
+}

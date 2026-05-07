@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Theatre Scout{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+    <h1><a href="/">Theatre Scout</a></h1>
+    <nav>
+        <a href="/">Theatres</a>
+        <a href="/shows">Upcoming shows</a>
+        <form action="/refresh" method="post" class="inline">
+            <button type="submit">Refresh</button>
+        </form>
+    </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer><small>Local theatre directory · scrapes {{ '{} venues'.format(68) }}</small></footer>
+</body>
+</html>

@@ -56,6 +56,11 @@ def scrape(
         "--enrich",
         help="After listing scrape, fetch each show's detail page for a description (slow).",
     ),
+    replace: bool = typer.Option(
+        False,
+        "--replace",
+        help="Wipe each theatre's existing rows before re-inserting. Use after adapter changes.",
+    ),
 ) -> None:
     """Scrape one or all theatres and persist shows to the local DB."""
     adapters.load_all()
@@ -63,11 +68,11 @@ def scrape(
     client = Client()
 
     if theatre:
-        run = scraper.run_one(theatre, client, conn, enrich=enrich)
+        run = scraper.run_one(theatre, client, conn, enrich=enrich, replace=replace)
         _print_run(run)
         raise typer.Exit(0 if run.status == "success" else 1)
 
-    runs = scraper.run_all(client, conn, enrich=enrich)
+    runs = scraper.run_all(client, conn, enrich=enrich, replace=replace)
     typer.echo(f"Scraped {len(runs)} theatres:")
     for r in runs:
         _print_run(r)

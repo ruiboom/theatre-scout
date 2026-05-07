@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
 
 from scout import db, scraper
 from scout.adapters import almeida  # noqa: F401  (registers the adapter)
+from scout.models import Show
 from scout.theatres import load as load_theatres
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "almeida.html"
@@ -73,6 +74,56 @@ def test_enrich_populates_descriptions(conn) -> None:  # type: ignore[no-untyped
     rows = db.query_by_theatre(conn, "almeida")
     by_title = {r.title: r for r in rows}
     assert "bold revival" in by_title["A Doll's House"].description
+
+
+def test_replace_drops_stale_rows_before_insert(conn) -> None:  # type: ignore[no-untyped-def]
+    # Pre-existing stale row that this scrape would otherwise leave behind.
+    now = datetime(2026, 5, 7, 12, 0, tzinfo=UTC)
+    db.insert_show(
+        conn,
+        Show(
+            theatre_slug="almeida",
+            title="Stale Show With Old Bad Title",
+            url="https://almeida.co.uk/whats-on/old-stale/",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 7, 1),
+            show_type="play",
+        ),
+        now=now,
+    )
+    assert any(s.title.startswith("Stale") for s in db.query_by_theatre(conn, "almeida"))
+
+    client = FixtureClient(FIXTURE.read_text())
+    run = scraper.run_one("almeida", client, conn, now=lambda: now, replace=True)
+    assert run.status == "success"
+    titles = {s.title for s in db.query_by_theatre(conn, "almeida")}
+    assert not any(t.startswith("Stale") for t in titles)
+    assert "A Doll's House" in titles
+
+
+def test_replace_does_not_run_if_adapter_fails(conn) -> None:  # type: ignore[no-untyped-def]
+    now = datetime(2026, 5, 7, 12, 0, tzinfo=UTC)
+    db.insert_show(
+        conn,
+        Show(
+            theatre_slug="almeida",
+            title="Keep Me Around",
+            url="https://almeida.co.uk/whats-on/keep/",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 7, 1),
+            show_type="play",
+        ),
+        now=now,
+    )
+
+    class BoomClient:
+        def get(self, url: str):  # type: ignore[no-untyped-def]
+            raise RuntimeError("network down")
+
+    run = scraper.run_one("almeida", BoomClient(), conn, now=lambda: now, replace=True)
+    assert run.status == "failed"
+    titles = {s.title for s in db.query_by_theatre(conn, "almeida")}
+    assert "Keep Me Around" in titles  # not deleted
 
 
 def test_scrape_failed_adapter_records_failure(conn) -> None:  # type: ignore[no-untyped-def]

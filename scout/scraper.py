@@ -29,12 +29,15 @@ def run_one(
     *,
     now: Callable[[], datetime] = _utcnow,
     enrich: bool = False,
+    replace: bool = False,
 ) -> ScrapeRun:
     started = now()
     adapter_cls = get_adapter(slug)
     try:
         shows = adapter_cls().fetch(client)
     except Exception as exc:
+        # If the fetch failed we deliberately do NOT delete existing rows —
+        # better to keep stale data than wipe everything on a transient outage.
         return _persist_run(
             conn,
             ScrapeRun(
@@ -48,6 +51,9 @@ def run_one(
 
     if enrich:
         shows = [_enrich(s, client) for s in shows]
+
+    if replace:
+        db.delete_shows_for_theatre(conn, slug)
 
     insert_at = now()
     for s in shows:
@@ -71,8 +77,12 @@ def run_all(
     *,
     now: Callable[[], datetime] = _utcnow,
     enrich: bool = False,
+    replace: bool = False,
 ) -> list[ScrapeRun]:
-    return [run_one(a.slug, client, conn, now=now, enrich=enrich) for a in all_adapters()]
+    return [
+        run_one(a.slug, client, conn, now=now, enrich=enrich, replace=replace)
+        for a in all_adapters()
+    ]
 
 
 def _enrich(s: Show, client: _ClientLike) -> Show:

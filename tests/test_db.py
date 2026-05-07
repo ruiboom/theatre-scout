@@ -124,6 +124,20 @@ def test_query_all_theatres_returns_typed(conn: sqlite3.Connection) -> None:
     assert all(isinstance(t, Theatre) for t in theatres)
 
 
+def test_delete_shows_for_theatre_only_removes_that_theatres_rows(
+    conn: sqlite3.Connection,
+) -> None:
+    now = datetime(2026, 5, 1, 10, 0, tzinfo=UTC)
+    db.insert_show(conn, show(slug="almeida", title="A"), now=now)
+    db.insert_show(
+        conn, show(slug="bush", title="B", url="https://bushtheatre.co.uk/shows/b"), now=now
+    )
+    deleted = db.delete_shows_for_theatre(conn, "almeida")
+    assert deleted == 1
+    assert db.query_by_theatre(conn, "almeida") == []
+    assert [s.title for s in db.query_by_theatre(conn, "bush")] == ["B"]
+
+
 def test_show_with_null_start_date_round_trips(conn: sqlite3.Connection) -> None:
     now = datetime(2026, 5, 1, 10, 0, tzinfo=UTC)
     db.insert_show(conn, show(title="Open Run", start=None, end=None), now=now)

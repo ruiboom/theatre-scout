@@ -19,13 +19,22 @@ uv run scout scrape --enrich   # fetches each show's detail page, ~15-20 min
 
 Use this overnight or when you want full descriptions. Without `--enrich` you get the title and dates extracted from the listing card; descriptions populate where the listing exposes them, otherwise stay empty.
 
+## After adapter changes
+
+```bash
+uv run scout scrape --theatre park-theatre --replace          # wipe stale rows for that venue first
+uv run scout scrape --replace                                  # wipe all stale rows, full re-scrape
+```
+
+`--replace` only deletes rows for theatres that *successfully* re-scrape — if a venue's fetch fails, its existing rows stay put.
+
 ## Useful one-offs
 
 ```bash
-uv run scout list                              # print every known theatre
-uv run scout scrape --theatre almeida          # rescrape one venue
-uv run scout scrape --theatre almeida --enrich # one venue, with descriptions
-uv run scout serve --port 8765                 # custom port
+uv run scout list                                              # print every known theatre
+uv run scout scrape --theatre almeida                          # rescrape one venue
+uv run scout scrape --theatre almeida --enrich --replace       # clean refresh of one venue
+uv run scout serve --port 8765                                 # custom port
 ```
 
 ## After pulling code changes

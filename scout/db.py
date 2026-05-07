@@ -117,6 +117,13 @@ def insert_show(conn: sqlite3.Connection, s: Show, *, now: datetime) -> None:
     conn.commit()
 
 
+def delete_shows_for_theatre(conn: sqlite3.Connection, slug: str) -> int:
+    """Wipe all rows for `slug` from `shows`. Returns the number deleted."""
+    cursor = conn.execute("DELETE FROM shows WHERE theatre_slug = ?", (slug,))
+    conn.commit()
+    return cursor.rowcount
+
+
 def record_scrape_run(conn: sqlite3.Connection, run: ScrapeRun) -> int:
     cursor = conn.execute(
         """

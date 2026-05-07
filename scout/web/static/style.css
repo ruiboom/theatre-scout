@@ -55,9 +55,27 @@ ul.theatres li, ul.shows li {
     padding: 0.6rem 0;
     border-bottom: 1px solid var(--border);
     display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+ul.theatres li {
+    flex-direction: row;
     align-items: baseline;
     gap: 1rem;
     flex-wrap: wrap;
+}
+.show-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+.description {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.45;
+    max-width: 70ch;
 }
 ul.theatres li:last-child, ul.shows li:last-child { border-bottom: none; }
 ul.theatres a { color: var(--link); text-decoration: none; font-weight: 500; }

@@ -9,10 +9,13 @@
     <ul class="shows">
         {% for s in shows %}
             <li>
-                <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
-                <span class="show-type">{{ s.show_type }}</span>
-                <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
-                {% if s.price_min %}<span class="price">{{ s.price_min | fmt_price }}{% if s.price_max %} – {{ s.price_max | fmt_price }}{% endif %}</span>{% endif %}
+                <div class="show-line">
+                    <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
+                    <span class="show-type">{{ s.show_type }}</span>
+                    <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
+                    {% if s.price_min %}<span class="price">{{ s.price_min | fmt_price }}{% if s.price_max %} – {{ s.price_max | fmt_price }}{% endif %}</span>{% endif %}
+                </div>
+                {% if s.description %}<p class="description">{{ s.description }}</p>{% endif %}
             </li>
         {% endfor %}
     </ul>

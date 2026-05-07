@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -7,7 +8,10 @@ from typing import Protocol
 
 from scout import db
 from scout.adapters.registry import all_adapters, get_adapter
-from scout.models import ScrapeRun
+from scout.enrich import extract_description
+from scout.models import ScrapeRun, Show
+
+log = logging.getLogger(__name__)
 
 
 class _ClientLike(Protocol):
@@ -24,6 +28,7 @@ def run_one(
     conn: sqlite3.Connection,
     *,
     now: Callable[[], datetime] = _utcnow,
+    enrich: bool = False,
 ) -> ScrapeRun:
     started = now()
     adapter_cls = get_adapter(slug)
@@ -40,6 +45,9 @@ def run_one(
                 error=f"{type(exc).__name__}: {exc}",
             ),
         )
+
+    if enrich:
+        shows = [_enrich(s, client) for s in shows]
 
     insert_at = now()
     for s in shows:
@@ -62,8 +70,29 @@ def run_all(
     conn: sqlite3.Connection,
     *,
     now: Callable[[], datetime] = _utcnow,
+    enrich: bool = False,
 ) -> list[ScrapeRun]:
-    return [run_one(a.slug, client, conn, now=now) for a in all_adapters()]
+    return [run_one(a.slug, client, conn, now=now, enrich=enrich) for a in all_adapters()]
+
+
+def _enrich(s: Show, client: _ClientLike) -> Show:
+    """Fetch the show detail page; if a usable description is found, copy it onto the Show."""
+    if s.description:
+        return s
+    try:
+        resp = client.get(str(s.url))
+    except Exception as exc:
+        log.warning("enrich: %s fetch failed: %s", s.url, exc)
+        return s
+    if resp is None:
+        return s
+    text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
+        "utf-8", errors="replace"
+    )
+    desc = extract_description(text)
+    if not desc:
+        return s
+    return s.model_copy(update={"description": desc})
 
 
 def _persist_run(conn: sqlite3.Connection, run: ScrapeRun) -> ScrapeRun:

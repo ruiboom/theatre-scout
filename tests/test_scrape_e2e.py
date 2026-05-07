@@ -49,6 +49,32 @@ def test_scrape_almeida_writes_shows_and_run(conn) -> None:  # type: ignore[no-u
     assert "Cleansed" in titles
 
 
+def test_enrich_populates_descriptions(conn) -> None:  # type: ignore[no-untyped-def]
+    listing_html = FIXTURE.read_text()
+    detail_html = (
+        '<html><head><meta name="description" content="A bold revival of '
+        "Henrik Ibsen's classic, staged with electric urgency.\">"
+        "</head><body></body></html>"
+    )
+
+    class Client:
+        def get(self, url: str):  # type: ignore[no-untyped-def]
+            class R:
+                pass
+
+            R.text = detail_html if "/whats-on/a-dolls-house" in url else listing_html
+            R.content = R.text.encode()
+            R.status_code = 200
+            return R
+
+    scraper.run_one(
+        "almeida", Client(), conn, now=lambda: datetime(2026, 5, 7, tzinfo=UTC), enrich=True
+    )
+    rows = db.query_by_theatre(conn, "almeida")
+    by_title = {r.title: r for r in rows}
+    assert "bold revival" in by_title["A Doll's House"].description
+
+
 def test_scrape_failed_adapter_records_failure(conn) -> None:  # type: ignore[no-untyped-def]
     class BoomClient:
         def get(self, url: str):  # type: ignore[no-untyped-def]

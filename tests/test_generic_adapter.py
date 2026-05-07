@@ -57,6 +57,40 @@ def test_no_selector_no_jsonld_returns_empty() -> None:
     assert NoSel().parse("<html>no shows here</html>", "https://x.com") == []
 
 
+def test_card_description_from_paragraph() -> None:
+    html = """
+    <article>
+        <h2>Show A</h2>
+        <a href="/a">link</a>
+        <p>A gripping new play about parallel universes and lost socks.</p>
+        <p>5 May 2026</p>
+    </article>
+    """
+    out = _Stub().parse(html, "https://x.com")
+    assert out[0].description == "A gripping new play about parallel universes and lost socks."
+
+
+def test_card_description_skipped_when_too_short() -> None:
+    html = """
+    <article>
+        <h2>Show A</h2>
+        <a href="/a">link</a>
+        <p>5 May 2026</p>
+        <p>Tickets</p>
+    </article>
+    """
+    out = _Stub().parse(html, "https://x.com")
+    assert out[0].description == ""
+
+
+def test_card_description_truncated_at_240_chars() -> None:
+    long = "Lorem ipsum " * 50  # ~600 chars
+    html = f'<article><h2>Show A</h2><a href="/a">l</a><p>{long}</p></article>'
+    out = _Stub().parse(html, "https://x.com")
+    assert len(out[0].description) <= 241  # 240 + ellipsis
+    assert out[0].description.endswith("…")
+
+
 def test_link_selector_uses_link_as_card() -> None:
     class LinkMode(GenericAdapter):
         slug = "_lm"

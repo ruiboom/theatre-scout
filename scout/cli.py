@@ -51,6 +51,11 @@ def scrape(
     theatre: str | None = typer.Option(
         None, "--theatre", help="Slug of a single theatre to scrape."
     ),
+    enrich: bool = typer.Option(
+        False,
+        "--enrich",
+        help="After listing scrape, fetch each show's detail page for a description (slow).",
+    ),
 ) -> None:
     """Scrape one or all theatres and persist shows to the local DB."""
     adapters.load_all()
@@ -58,11 +63,11 @@ def scrape(
     client = Client()
 
     if theatre:
-        run = scraper.run_one(theatre, client, conn)
+        run = scraper.run_one(theatre, client, conn, enrich=enrich)
         _print_run(run)
         raise typer.Exit(0 if run.status == "success" else 1)
 
-    runs = scraper.run_all(client, conn)
+    runs = scraper.run_all(client, conn, enrich=enrich)
     typer.echo(f"Scraped {len(runs)} theatres:")
     for r in runs:
         _print_run(r)

@@ -10,6 +10,7 @@ Bespoke adapters override `parse()` directly when neither is enough.
 from __future__ import annotations
 
 import logging
+import re
 import urllib.parse
 
 from bs4 import BeautifulSoup, Tag
@@ -21,6 +22,34 @@ from scout.classify import classify
 from scout.models import Show, ShowType
 
 log = logging.getLogger(__name__)
+
+_DATE_LIKE = re.compile(r"^[\d\s,.\-–:/]+$")
+_GENERIC_BUTTON = re.compile(
+    r"^(book|tickets|book tickets|find out more|read more|buy now|info|details)\b",
+    re.IGNORECASE,
+)
+DESC_MAX_CHARS = 240
+
+
+def _extract_description(card: Tag, title: str) -> str:
+    """Pick the longest meaningful <p> in `card` that isn't the title or boilerplate."""
+    best = ""
+    for p in card.find_all("p"):
+        text = p.get_text(" ", strip=True)
+        if not text or text == title or len(text) < 20:
+            continue
+        if _DATE_LIKE.match(text) or _GENERIC_BUTTON.match(text):
+            continue
+        if len(text) > len(best):
+            best = text
+    if not best:
+        return ""
+    if len(best) > DESC_MAX_CHARS:
+        truncated = best[:DESC_MAX_CHARS]
+        # don't break mid-word
+        cut = truncated.rsplit(" ", 1)[0]
+        return cut + "…"
+    return best
 
 
 class GenericAdapter(BaseAdapter):
@@ -84,13 +113,15 @@ class GenericAdapter(BaseAdapter):
         )
         image = (img_el.get("src") or img_el.get("data-src")) if isinstance(img_el, Tag) else None
         image_url = urllib.parse.urljoin(base_url, str(image)) if image else None
-        show_type = classify(title, default=self.default_show_type)
+        description = _extract_description(text_source, title)
+        show_type = classify(f"{title} {description}", default=self.default_show_type)
         try:
             return Show(
                 theatre_slug=self.slug,
                 title=title,
                 show_type=show_type,
                 url=url,
+                description=description,
                 start_date=start,
                 end_date=end,
                 image_url=image_url,

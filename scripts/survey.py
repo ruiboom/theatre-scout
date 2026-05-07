@@ -13,7 +13,6 @@ Usage: uv run python scripts/survey.py
 from __future__ import annotations
 
 import json
-import re
 import time
 from pathlib import Path
 from urllib.parse import urljoin

@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Upcoming shows · Theatre Scout{% endblock %}
 {% block content %}
+<form method="get" action="/shows" class="filters">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search title…">
+    <select name="type">
+        <option value="">All types</option>
+        {% for t in ["play", "musical", "comedy", "dance", "opera", "family", "cabaret", "other"] %}
+            <option value="{{ t }}" {% if filter_type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+    </select>
+    <select name="cat">
+        <option value="">All categories</option>
+        {% for c, label in [("major","Major"),("mid","Mid-sized"),("fringe","Fringe"),("outer","Outer")] %}
+            <option value="{{ c }}" {% if filter_cat == c %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+</form>
 <h2>Upcoming shows ({{ shows | length }})</h2>
 {% if shows %}
     <ul class="shows">

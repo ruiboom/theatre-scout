@@ -91,11 +91,35 @@ def shows_page(
     conn: sqlite3.Connection = Depends(get_conn),
     theatres_path: Path = Depends(get_theatres_path),
     today: str | None = None,
+    q: str | None = None,
+    type: str | None = None,
+    cat: str | None = None,
 ) -> object:
     cutoff = Date.fromisoformat(today) if today else Date.today()
     shows = db.query_upcoming(conn, today=cutoff)
     theatres = {t.slug: t for t in load_theatres(theatres_path)}
-    return templates.TemplateResponse(request, "shows.html", {"shows": shows, "theatres": theatres})
+    if q:
+        needle = q.lower()
+        shows = [s for s in shows if needle in s.title.lower()]
+    if type:
+        shows = [s for s in shows if s.show_type == type]
+    if cat:
+        shows = [
+            s
+            for s in shows
+            if s.theatre_slug in theatres and theatres[s.theatre_slug].category == cat
+        ]
+    return templates.TemplateResponse(
+        request,
+        "shows.html",
+        {
+            "shows": shows,
+            "theatres": theatres,
+            "q": q or "",
+            "filter_type": type or "",
+            "filter_cat": cat or "",
+        },
+    )
 
 
 @app.post("/refresh")

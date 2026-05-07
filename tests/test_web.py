@@ -84,6 +84,24 @@ def test_shows_page_lists_upcoming_only(client: TestClient) -> None:
     assert "Past Show" not in r.text
 
 
+def test_shows_filter_by_search_query(client: TestClient) -> None:
+    r = client.get("/shows", params={"today": "2026-05-15", "q": "doll"})
+    assert r.status_code == 200
+    assert "Doll" in r.text
+
+
+def test_shows_filter_by_type(client: TestClient) -> None:
+    r = client.get("/shows", params={"today": "2026-05-15", "type": "comedy"})
+    assert r.status_code == 200
+    assert "Doll" not in r.text  # the seeded show is type=play
+
+
+def test_shows_filter_by_category(client: TestClient) -> None:
+    r = client.get("/shows", params={"today": "2026-05-15", "cat": "fringe"})
+    assert r.status_code == 200
+    assert "Doll" not in r.text  # almeida is major, not fringe
+
+
 def test_refresh_redirects_and_calls_scraper(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

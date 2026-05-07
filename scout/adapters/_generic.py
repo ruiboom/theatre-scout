@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup, Tag
 from scout.adapters._html import parse_date_range
 from scout.adapters._jsonld import parse_jsonld
 from scout.adapters.base import BaseAdapter
+from scout.classify import classify
 from scout.models import Show, ShowType
 
 log = logging.getLogger(__name__)
@@ -83,11 +84,12 @@ class GenericAdapter(BaseAdapter):
         )
         image = (img_el.get("src") or img_el.get("data-src")) if isinstance(img_el, Tag) else None
         image_url = urllib.parse.urljoin(base_url, str(image)) if image else None
+        show_type = classify(title, default=self.default_show_type)
         try:
             return Show(
                 theatre_slug=self.slug,
                 title=title,
-                show_type=self.default_show_type,
+                show_type=show_type,
                 url=url,
                 start_date=start,
                 end_date=end,

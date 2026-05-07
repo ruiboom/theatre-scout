@@ -8,7 +8,7 @@ from typing import Protocol
 
 from scout import db
 from scout.adapters.registry import all_adapters, get_adapter
-from scout.enrich import extract_description
+from scout.enrich import extract_description, extract_image
 from scout.models import ScrapeRun, Show
 
 log = logging.getLogger(__name__)
@@ -86,8 +86,11 @@ def run_all(
 
 
 def _enrich(s: Show, client: _ClientLike) -> Show:
-    """Fetch the show detail page; if a usable description is found, copy it onto the Show."""
-    if s.description:
+    """Fetch the show detail page and copy the description and (better) image onto the Show.
+
+    Skips the network call if both fields are already filled from the listing page.
+    """
+    if s.description and s.image_url:
         return s
     try:
         resp = client.get(str(s.url))
@@ -99,10 +102,18 @@ def _enrich(s: Show, client: _ClientLike) -> Show:
     text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
         "utf-8", errors="replace"
     )
-    desc = extract_description(text)
-    if not desc:
+    updates: dict[str, str] = {}
+    if not s.description:
+        desc = extract_description(text)
+        if desc:
+            updates["description"] = desc
+    # Detail-page images are usually canonical hero shots; prefer them over listing thumbs.
+    img = extract_image(text, str(s.url))
+    if img:
+        updates["image_url"] = img
+    if not updates:
         return s
-    return s.model_copy(update={"description": desc})
+    return s.model_copy(update=updates)
 
 
 def _persist_run(conn: sqlite3.Connection, run: ScrapeRun) -> ScrapeRun:

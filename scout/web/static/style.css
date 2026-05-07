@@ -51,24 +51,46 @@ footer {
 .category h3 small { color: var(--muted); font-weight: normal; }
 
 ul.theatres, ul.shows { list-style: none; padding: 0; margin: 0; }
-ul.theatres li, ul.shows li {
+ul.theatres li {
     padding: 0.6rem 0;
     border-bottom: 1px solid var(--border);
     display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-}
-ul.theatres li {
-    flex-direction: row;
     align-items: baseline;
     gap: 1rem;
     flex-wrap: wrap;
+}
+ul.shows li {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+ul.shows li .show-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
 }
 .show-line {
     display: flex;
     align-items: baseline;
     gap: 0.8rem;
     flex-wrap: wrap;
+}
+.thumb {
+    flex: 0 0 auto;
+    display: block;
+    width: 120px;
+    background: #ececec;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.thumb img {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 .description {
     color: var(--muted);

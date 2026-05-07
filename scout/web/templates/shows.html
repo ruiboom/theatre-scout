@@ -22,13 +22,16 @@
     <ul class="shows">
         {% for s in shows %}
             <li>
-                <div class="show-line">
-                    <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
-                    <span class="show-type">{{ s.show_type }}</span>
-                    <span class="venue"><a href="/theatres/{{ s.theatre_slug }}">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</a></span>
-                    <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
+                {% if s.image_url %}<a href="{{ s.url }}" target="_blank" rel="noopener" class="thumb"><img src="{{ s.image_url }}" alt="" loading="lazy"></a>{% endif %}
+                <div class="show-body">
+                    <div class="show-line">
+                        <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
+                        <span class="show-type">{{ s.show_type }}</span>
+                        <span class="venue"><a href="/theatres/{{ s.theatre_slug }}">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</a></span>
+                        <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
+                    </div>
+                    {% if s.description %}<p class="description">{{ s.description }}</p>{% endif %}
                 </div>
-                {% if s.description %}<p class="description">{{ s.description }}</p>{% endif %}
             </li>
         {% endfor %}
     </ul>

@@ -50,11 +50,13 @@ def test_scrape_almeida_writes_shows_and_run(conn) -> None:  # type: ignore[no-u
     assert "Cleansed" in titles
 
 
-def test_enrich_populates_descriptions(conn) -> None:  # type: ignore[no-untyped-def]
+def test_enrich_populates_descriptions_and_images(conn) -> None:  # type: ignore[no-untyped-def]
     listing_html = FIXTURE.read_text()
     detail_html = (
-        '<html><head><meta name="description" content="A bold revival of '
+        "<html><head>"
+        '<meta name="description" content="A bold revival of '
         "Henrik Ibsen's classic, staged with electric urgency.\">"
+        '<meta property="og:image" content="https://cdn.almeida.co.uk/hero/dolls.jpg">'
         "</head><body></body></html>"
     )
 
@@ -73,7 +75,9 @@ def test_enrich_populates_descriptions(conn) -> None:  # type: ignore[no-untyped
     )
     rows = db.query_by_theatre(conn, "almeida")
     by_title = {r.title: r for r in rows}
-    assert "bold revival" in by_title["A Doll's House"].description
+    dolls = by_title["A Doll's House"]
+    assert "bold revival" in dolls.description
+    assert dolls.image_url == "https://cdn.almeida.co.uk/hero/dolls.jpg"
 
 
 def test_replace_drops_stale_rows_before_insert(conn) -> None:  # type: ignore[no-untyped-def]

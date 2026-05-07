@@ -1,0 +1,262 @@
+{
+  "almeida": {
+    "selector": "[class*=event-card]",
+    "matches": 22
+  },
+  "bridge-theatre": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 3
+  },
+  "bush": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 10
+  },
+  "donmar-warehouse": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 8
+  },
+  "hampstead": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 27
+  },
+  "kiln": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 15
+  },
+  "lyric-hammersmith": {
+    "selector": "a[href*=\"/shows/\"]",
+    "matches": 58
+  },
+  "menier-chocolate-factory": {
+    "selector": ".tile",
+    "matches": 5
+  },
+  "old-vic": {
+    "selector": null,
+    "matches": 0
+  },
+  "open-air-theatre": {
+    "selector": "article",
+    "matches": 10
+  },
+  "orange-tree": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 72
+  },
+  "royal-court": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 21
+  },
+  "sadlers-wells": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 53
+  },
+  "shakespeares-globe": {
+    "selector": "[class*=event-card]",
+    "matches": 74
+  },
+  "soho-theatre": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 20
+  },
+  "theatre-royal-stratford-east": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 36
+  },
+  "young-vic": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 78
+  },
+  "arcola": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 38
+  },
+  "barbican": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 46
+  },
+  "brixton-house": {
+    "selector": "li[class*=show]",
+    "matches": 15
+  },
+  "charing-cross": {
+    "selector": null,
+    "matches": 0
+  },
+  "coronet": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 19
+  },
+  "gate": {
+    "selector": null,
+    "matches": 0
+  },
+  "hackney-empire": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 24
+  },
+  "marylebone": {
+    "selector": "[class*=production-item]",
+    "matches": 8
+  },
+  "new-diorama": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 18
+  },
+  "park-theatre": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 68
+  },
+  "pleasance": {
+    "selector": null,
+    "matches": 0
+  },
+  "riverside-studios": {
+    "selector": null,
+    "matches": 0
+  },
+  "roundhouse": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 45
+  },
+  "seven-dials-playhouse": {
+    "selector": null,
+    "matches": 0
+  },
+  "other-palace": {
+    "selector": "article",
+    "matches": 32
+  },
+  "yard": {
+    "selector": null,
+    "matches": 0
+  },
+  "underbelly-boulevard": {
+    "selector": ".tile",
+    "matches": 3
+  },
+  "unicorn": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 12
+  },
+  "wiltons": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 63
+  },
+  "camden-peoples": {
+    "selector": ".event",
+    "matches": 13
+  },
+  "cockpit": {
+    "selector": "a[href*=\"/show/\"]",
+    "matches": 84
+  },
+  "drayton-arms": {
+    "selector": null,
+    "matches": 0
+  },
+  "etcetera": {
+    "selector": null,
+    "matches": 0
+  },
+  "finborough": {
+    "selector": "a[href*=\"/productions/\"]",
+    "matches": 5
+  },
+  "jermyn-street": {
+    "selector": "a[href*=\"/show/\"]",
+    "matches": 12
+  },
+  "kings-head": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 29
+  },
+  "old-red-lion": {
+    "selector": null,
+    "matches": 0
+  },
+  "omnibus": {
+    "selector": null,
+    "matches": 0
+  },
+  "southwark-playhouse": {
+    "selector": "a[href*=\"/productions/\"]",
+    "matches": 45
+  },
+  "tara": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 12
+  },
+  "vaults": {
+    "selector": null,
+    "matches": 0
+  },
+  "tower": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 83
+  },
+  "union": {
+    "selector": "a[href*=\"/show/\"]",
+    "matches": 32
+  },
+  "upstairs-at-the-gatehouse": {
+    "selector": null,
+    "matches": 0
+  },
+  "waterloo-east": {
+    "selector": null,
+    "matches": 0
+  },
+  "white-bear": {
+    "selector": null,
+    "matches": 0
+  },
+  "alexandra-palace": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 51
+  },
+  "bloomsbury": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 10
+  },
+  "churchill": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 20
+  },
+  "eventim-apollo": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 75
+  },
+  "greenwich": {
+    "selector": "a[href*=\"/events/\"]",
+    "matches": 64
+  },
+  "new-wimbledon": {
+    "selector": "a[href*=\"/shows/\"]",
+    "matches": 72
+  },
+  "polka": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 36
+  },
+  "queens-hornchurch": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 3
+  },
+  "richmond": {
+    "selector": "a[href*=\"/shows/\"]",
+    "matches": 72
+  },
+  "rose-kingston": {
+    "selector": "a[href*=\"/whats-on/\"]",
+    "matches": 21
+  },
+  "troubadour-canary-wharf": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 20
+  },
+  "troubadour-wembley-park": {
+    "selector": "a[href*=\"/event/\"]",
+    "matches": 20
+  }
+}

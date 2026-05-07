@@ -66,6 +66,46 @@ Decisions taken autonomously during the build that the user should review later.
 
 ---
 
+## M8 — adapter rollout strategy: bulk module vs one-file-per-adapter
+
+**Question**: BUILD.md said "one module per theatre". 67 thin GenericAdapter subclasses each in their own file = 67 files of ~5 lines.
+
+**Decision taken**: Put thin GenericAdapter subclasses in a single `scout/adapters/bulk.py` with one tuple per theatre. Almeida (which has bespoke parsing) keeps its own file. New bespoke adapters get their own file.
+
+**Why**: 67 near-identical 5-line files would be wasteful; the bulk file is easier to scan and maintain. The structural rule (one file per adapter) was meant to isolate per-theatre logic — bulk entries have no per-theatre logic worth isolating.
+
+---
+
+## M8 — three theatres failed to fetch from main domain
+
+**Question**: `national-theatre`, `hen-and-chickens`, `tabard` returned errors during the survey (likely DNS, Cloudflare bot block, or 403). Skip or work around?
+
+**Decision taken**: Registered them with their best-guess listings URL anyway. They'll show up as `failed` ScrapeRuns at runtime, transparently. No manual fix yet — would need to test from a real browser User-Agent or use Playwright.
+
+**Why**: The data is recoverable in a follow-up. Skipping them entirely would hide a data quality issue.
+
+---
+
+## M8 — five sites are JavaScript-rendered (no scrape data without a browser)
+
+**Question**: `seven-dials-playhouse`, `yard`, `vaults`, `upstairs-at-the-gatehouse` (Ticketsolve), `waterloo-east` returned mostly empty HTML. Need Playwright?
+
+**Decision taken**: Registered with empty selectors so they parse cleanly to `[]`. Playwright integration is M9+ work — too much scope to add now. Listed in QUESTION_LOG as known JS-only sites.
+
+**Why**: Polluting the build with a Playwright dependency for 5 of 68 sites isn't worth it yet. They're transparent (0 shows) rather than crashing.
+
+---
+
+## M8 — bulk adapter quality is mixed (e.g. Pleasance returns 323 "Book tickets for X" titles)
+
+**Question**: The link-pattern selectors return many matches with noisy titles ("Book tickets for The Show"). Clean now or later?
+
+**Decision taken**: Leave as-is for v1. Per-adapter title cleanup (regex strip prefix) belongs in a custom adapter when worth it.
+
+**Why**: The data is correct, just ugly. Easy to fix per-theatre when reviewing the live UI. Spending time polishing every adapter before they're reviewed would be premature.
+
+---
+
 ## M0 — Python version floor
 
 **Question**: BUILD.md says "Python 3.11+". System has 3.12.3. Pin floor at 3.11 or 3.12?

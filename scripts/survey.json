@@ -1,0 +1,602 @@
+[
+  {
+    "slug": "almeida",
+    "status": "ok",
+    "final_url": "https://almeida.co.uk/whats-on/",
+    "size": 63356,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "[class*=event-card] (80)"
+  },
+  {
+    "slug": "bridge-theatre",
+    "status": "ok",
+    "final_url": "https://www.bridgetheatre.co.uk/whats-on/",
+    "size": 33410,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "bush",
+    "status": "ok",
+    "final_url": "https://www.bushtheatre.co.uk/whats-on/",
+    "size": 90080,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "donmar-warehouse",
+    "status": "ok",
+    "final_url": "https://www.donmarwarehouse.com/whats-on/",
+    "size": 55928,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "hampstead",
+    "status": "ok",
+    "final_url": "https://www.hampsteadtheatre.com/whats-on/main-stage/",
+    "size": 34374,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "kiln",
+    "status": "ok",
+    "final_url": "https://kilntheatre.com/whats-on/",
+    "size": 123974,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "lyric-hammersmith",
+    "status": "ok",
+    "final_url": "https://lyric.co.uk/whats-on/",
+    "size": 532789,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (33)"
+  },
+  {
+    "slug": "menier-chocolate-factory",
+    "status": "ok",
+    "final_url": "https://www.menierchocolatefactory.com/whats-on/",
+    "size": 84613,
+    "jsonld_events": 4,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "national-theatre",
+    "status": "FETCH-FAIL",
+    "url": "https://nationaltheatre.org.uk/"
+  },
+  {
+    "slug": "old-vic",
+    "status": "ok",
+    "final_url": "https://www.oldvictheatre.com/productions/",
+    "size": 145243,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "open-air-theatre",
+    "status": "ok",
+    "final_url": "https://openairtheatre.com/whats-on/",
+    "size": 59644,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (10)"
+  },
+  {
+    "slug": "orange-tree",
+    "status": "ok",
+    "final_url": "https://orangetreetheatre.co.uk/whats-on/",
+    "size": 376626,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": ".show (13)"
+  },
+  {
+    "slug": "royal-court",
+    "status": "ok",
+    "final_url": "https://royalcourttheatre.com/whats-on/",
+    "size": 170746,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "sadlers-wells",
+    "status": "ok",
+    "final_url": "https://www.sadlerswells.com/whats-on/",
+    "size": 171798,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "shakespeares-globe",
+    "status": "ok",
+    "final_url": "https://www.shakespearesglobe.com/whats-on/",
+    "size": 211455,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "soho-theatre",
+    "status": "ok",
+    "final_url": "https://sohotheatre.com/dean-street/",
+    "size": 101997,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "theatre-royal-stratford-east",
+    "status": "ok",
+    "final_url": "https://stratfordeast.com/whats-on/",
+    "size": 43690,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "young-vic",
+    "status": "ok",
+    "final_url": "https://www.youngvic.org/whats-on",
+    "size": 71942,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "arcola",
+    "status": "ok",
+    "final_url": "https://www.arcolatheatre.com/whats-on/",
+    "size": 214687,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (21)"
+  },
+  {
+    "slug": "barbican",
+    "status": "ok",
+    "final_url": "https://www.barbican.org.uk/whats-on",
+    "size": 270407,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (30)"
+  },
+  {
+    "slug": "brixton-house",
+    "status": "ok",
+    "final_url": "https://brixtonhouse.co.uk/whats-on/",
+    "size": 105238,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "charing-cross",
+    "status": "ok",
+    "final_url": "https://charingcrosstheatre.co.uk/",
+    "size": 29714,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "coronet",
+    "status": "ok",
+    "final_url": "https://www.thecoronettheatre.com/whats-on/",
+    "size": 48168,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (6)"
+  },
+  {
+    "slug": "gate",
+    "status": "ok",
+    "final_url": "https://www.gatetheatre.co.uk/our-work/",
+    "size": 149384,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "hackney-empire",
+    "status": "ok",
+    "final_url": "https://www.hackneyempire.co.uk/whats-on",
+    "size": 165758,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "marylebone",
+    "status": "ok",
+    "final_url": "https://www.marylebonetheatre.com/",
+    "size": 56885,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "new-diorama",
+    "status": "ok",
+    "final_url": "https://newdiorama.com/whats-on/",
+    "size": 89544,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "park-theatre",
+    "status": "ok",
+    "final_url": "https://parktheatre.co.uk/whats-on/",
+    "size": 612485,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (41)"
+  },
+  {
+    "slug": "pleasance",
+    "status": "ok",
+    "final_url": "https://www.pleasance.co.uk/events",
+    "size": 491648,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "riverside-studios",
+    "status": "ok",
+    "final_url": "https://riversidestudios.co.uk/whats-on/",
+    "size": 341337,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "roundhouse",
+    "status": "ok",
+    "final_url": "https://www.roundhouse.org.uk/whats-on/",
+    "size": 160847,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "seven-dials-playhouse",
+    "status": "ok",
+    "final_url": "https://www.sevendialsplayhouse.co.uk/whats-on",
+    "size": 17077,
+    "jsonld_events": 0,
+    "js_rendered": true,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "other-palace",
+    "status": "ok",
+    "final_url": "https://theotherpalace.co.uk/whats-on/",
+    "size": 246239,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (32)"
+  },
+  {
+    "slug": "yard",
+    "status": "ok",
+    "final_url": "https://www.theyardtheatre.co.uk/whats-on",
+    "size": 51492,
+    "jsonld_events": 0,
+    "js_rendered": true,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "underbelly-boulevard",
+    "status": "ok",
+    "final_url": "https://underbellyboulevard.com/tickets/",
+    "size": 189523,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "unicorn",
+    "status": "ok",
+    "final_url": "https://www.unicorntheatre.com/whats-on/",
+    "size": 151929,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "wiltons",
+    "status": "ok",
+    "final_url": "https://wiltons.org.uk/whats-on/",
+    "size": 103684,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "camden-peoples",
+    "status": "ok",
+    "final_url": "https://cptheatre.co.uk/whats-on",
+    "size": 67096,
+    "jsonld_events": 11,
+    "js_rendered": false,
+    "selector_guess": ".event (13)"
+  },
+  {
+    "slug": "cockpit",
+    "status": "ok",
+    "final_url": "https://www.thecockpit.org.uk/",
+    "size": 109161,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "drayton-arms",
+    "status": "ok",
+    "final_url": "https://thedraytonarmstheatre.co.uk/index.php",
+    "size": 56133,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "etcetera",
+    "status": "ok",
+    "final_url": "https://www.etceteratheatrecamden.com/events/",
+    "size": 1169134,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "finborough",
+    "status": "ok",
+    "final_url": "https://www.finboroughtheatre.co.uk/productions",
+    "size": 75958,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "hen-and-chickens",
+    "status": "FETCH-FAIL",
+    "url": "https://henandchickens.com/"
+  },
+  {
+    "slug": "jermyn-street",
+    "status": "ok",
+    "final_url": "https://www.jermynstreettheatre.co.uk/now-next/",
+    "size": 66865,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "kings-head",
+    "status": "ok",
+    "final_url": "https://kingsheadtheatre.com/whats-on",
+    "size": 149887,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "old-red-lion",
+    "status": "ok",
+    "final_url": "https://weareoldred.co.uk/",
+    "size": 89984,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "omnibus",
+    "status": "ok",
+    "final_url": "https://www.omnibus-clapham.org/",
+    "size": 1831045,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "southwark-playhouse",
+    "status": "ok",
+    "final_url": "https://southwarkplayhouse.co.uk/",
+    "size": 159304,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (18)"
+  },
+  {
+    "slug": "tabard",
+    "status": "FETCH-FAIL",
+    "url": "https://tabardtheatre.co.uk/"
+  },
+  {
+    "slug": "tara",
+    "status": "ok",
+    "final_url": "https://taratheatre.com/whats-on/",
+    "size": 61552,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "vaults",
+    "status": "ok",
+    "final_url": "https://www.thevaults.london/whats-on",
+    "size": 829128,
+    "jsonld_events": 0,
+    "js_rendered": true,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "tower",
+    "status": "ok",
+    "final_url": "https://www.towertheatre.org.uk/whats-on/",
+    "size": 311833,
+    "jsonld_events": 23,
+    "js_rendered": false,
+    "selector_guess": "[class*=event-card] (10)"
+  },
+  {
+    "slug": "union",
+    "status": "ok",
+    "final_url": "https://uniontheatre.biz/whats-on/",
+    "size": 38012,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "upstairs-at-the-gatehouse",
+    "status": "ok",
+    "final_url": "https://upstairsatthegatehouse.ticketsolve.com/ticketbooth/shows?TSLVq=1a11d9bd-8fa7-4474-8cbd-4f94183831ca&TSLVp=884982a9-919c-4ef2-a97c-6092e094924f&TSLVts=1778112688&TSLVc=ticketsolve&TSLVe=upstairsatgatehouse&TSLVrt=Safetynet&TSLVh=be4ff3bd8d39dd122cdd22856f14c432",
+    "size": 31658,
+    "jsonld_events": 0,
+    "js_rendered": true,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "waterloo-east",
+    "status": "ok",
+    "final_url": "https://www.waterlooeast.co.uk/",
+    "size": 498255,
+    "jsonld_events": 0,
+    "js_rendered": true,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "white-bear",
+    "status": "ok",
+    "final_url": "https://www.whitebeartheatre.co.uk/",
+    "size": 813878,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "alexandra-palace",
+    "status": "ok",
+    "final_url": "https://www.alexandrapalace.com/whats-on/",
+    "size": 184652,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "bloomsbury",
+    "status": "ok",
+    "final_url": "https://www.bloomsburytheatre.com",
+    "size": 39329,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "churchill",
+    "status": "ok",
+    "final_url": "https://trafalgartickets.com/churchill-theatre-bromley/en-GB",
+    "size": 1949555,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "eventim-apollo",
+    "status": "ok",
+    "final_url": "https://www.eventimapollo.com/events/",
+    "size": 536841,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "greenwich",
+    "status": "ok",
+    "final_url": "https://greenwichtheatre.org.uk/whats-on/",
+    "size": 141663,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (32)"
+  },
+  {
+    "slug": "new-wimbledon",
+    "status": "ok",
+    "final_url": "https://www.atgtickets.com/venues/new-wimbledon-theatre/whats-on/",
+    "size": 621624,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "polka",
+    "status": "ok",
+    "final_url": "https://polkatheatre.com/whats-on/",
+    "size": 337801,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "article (14)"
+  },
+  {
+    "slug": "queens-hornchurch",
+    "status": "ok",
+    "final_url": "https://queens-theatre.co.uk/whats-on/",
+    "size": 134645,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "richmond",
+    "status": "ok",
+    "final_url": "https://www.atgtickets.com/venues/richmond-theatre/whats-on/",
+    "size": 613335,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "rose-kingston",
+    "status": "ok",
+    "final_url": "https://www.rosetheatre.org/whats-on",
+    "size": 150309,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "troubadour-canary-wharf",
+    "status": "ok",
+    "final_url": "https://troubadour.com/",
+    "size": 169370,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  },
+  {
+    "slug": "troubadour-wembley-park",
+    "status": "ok",
+    "final_url": "https://troubadour.com/",
+    "size": 169370,
+    "jsonld_events": 0,
+    "js_rendered": false,
+    "selector_guess": "(none)"
+  }
+]

@@ -102,6 +102,34 @@ def test_shows_filter_by_category(client: TestClient) -> None:
     assert "Doll" not in r.text  # almeida is major, not fringe
 
 
+def test_shows_filter_today_excludes_future_only_runs(client: TestClient) -> None:
+    # Seeded show runs 1 Jun → 1 Jul; today = 5 May should exclude it.
+    r = client.get("/shows", params={"today": "2026-05-05", "when": "today"})
+    assert r.status_code == 200
+    assert "Doll" not in r.text
+
+
+def test_shows_filter_today_includes_active_runs(client: TestClient) -> None:
+    # today = 15 Jun is inside the 1 Jun → 1 Jul run.
+    r = client.get("/shows", params={"today": "2026-06-15", "when": "today"})
+    assert r.status_code == 200
+    assert "Doll" in r.text
+
+
+def test_shows_filter_week_includes_imminent_runs(client: TestClient) -> None:
+    # today = 28 May; show starts 1 Jun (≤7 days out) → included.
+    r = client.get("/shows", params={"today": "2026-05-28", "when": "week"})
+    assert r.status_code == 200
+    assert "Doll" in r.text
+
+
+def test_shows_filter_week_excludes_far_future_runs(client: TestClient) -> None:
+    # today = 1 May; show starts 1 Jun → too far.
+    r = client.get("/shows", params={"today": "2026-05-01", "when": "week"})
+    assert r.status_code == 200
+    assert "Doll" not in r.text
+
+
 def test_refresh_redirects_and_calls_scraper(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

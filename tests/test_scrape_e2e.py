@@ -105,6 +105,35 @@ def test_replace_drops_stale_rows_before_insert(conn) -> None:  # type: ignore[n
     assert "A Doll's House" in titles
 
 
+def test_replace_preserves_first_seen_by_url(conn) -> None:  # type: ignore[no-untyped-def]
+    # Old row at the URL the live scrape will rediscover.
+    older = datetime(2026, 1, 1, 9, 0, tzinfo=UTC)
+    db.insert_show(
+        conn,
+        Show(
+            theatre_slug="almeida",
+            title="A Doll's House — old form",
+            url="https://almeida.co.uk/whats-on/a-dolls-house-play/",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 7, 1),
+            show_type="play",
+        ),
+        now=older,
+    )
+
+    later = datetime(2026, 5, 9, 12, 0, tzinfo=UTC)
+    scraper.run_one(
+        "almeida", FixtureClient(FIXTURE.read_text()), conn, now=lambda: later, replace=True
+    )
+
+    row = conn.execute(
+        "SELECT first_seen_at FROM shows WHERE url = ?",
+        ("https://almeida.co.uk/whats-on/a-dolls-house-play/",),
+    ).fetchone()
+    assert row is not None
+    assert row[0] == older.isoformat()  # preserved across the replace
+
+
 def test_replace_does_not_run_if_adapter_fails(conn) -> None:  # type: ignore[no-untyped-def]
     now = datetime(2026, 5, 7, 12, 0, tzinfo=UTC)
     db.insert_show(

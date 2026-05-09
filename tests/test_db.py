@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -122,6 +122,84 @@ def test_query_all_theatres_returns_typed(conn: sqlite3.Connection) -> None:
     theatres = db.query_all_theatres(conn)
     assert {t.slug for t in theatres} == {"almeida", "bush"}
     assert all(isinstance(t, Theatre) for t in theatres)
+
+
+def test_insert_show_with_explicit_first_seen(conn: sqlite3.Connection) -> None:
+    now = datetime(2026, 5, 9, 10, 0, tzinfo=UTC)
+    older = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+    db.insert_show(conn, show(title="Older Title"), now=now, first_seen=older)
+    row = conn.execute(
+        "SELECT first_seen_at, last_seen_at FROM shows WHERE title=?", ("Older Title",)
+    ).fetchone()
+    assert row[0] == older.isoformat()
+    assert row[1] == now.isoformat()
+
+
+def test_first_seen_by_url_returns_mapping(conn: sqlite3.Connection) -> None:
+    now = datetime(2026, 5, 9, 10, 0, tzinfo=UTC)
+    db.insert_show(conn, show(title="A", url="https://almeida.co.uk/a"), now=now)
+    db.insert_show(conn, show(title="B", url="https://almeida.co.uk/b"), now=now)
+    db.insert_show(conn, show(slug="bush", title="C", url="https://bushtheatre.co.uk/c"), now=now)
+    out = db.first_seen_by_url(conn, "almeida")
+    assert set(out) == {"https://almeida.co.uk/a", "https://almeida.co.uk/b"}
+    assert out["https://almeida.co.uk/a"] == now.isoformat()
+
+
+def test_query_new_shows_returns_only_post_previous_scrape(conn: sqlite3.Connection) -> None:
+    # Two successful runs for almeida.
+    run1_start = datetime(2026, 5, 1, 10, 0, tzinfo=UTC)
+    run1_end = datetime(2026, 5, 1, 10, 5, tzinfo=UTC)
+    run2_start = datetime(2026, 5, 9, 10, 0, tzinfo=UTC)
+    run2_end = datetime(2026, 5, 9, 10, 5, tzinfo=UTC)
+    db.record_scrape_run(
+        conn,
+        ScrapeRun(
+            theatre_slug="almeida",
+            started_at=run1_start,
+            finished_at=run1_end,
+            status="success",
+            shows_found=1,
+        ),
+    )
+    db.record_scrape_run(
+        conn,
+        ScrapeRun(
+            theatre_slug="almeida",
+            started_at=run2_start,
+            finished_at=run2_end,
+            status="success",
+            shows_found=2,
+        ),
+    )
+    db.insert_show(
+        conn,
+        show(title="Pre-existing", url="https://almeida.co.uk/pre"),
+        now=run1_start + timedelta(seconds=1),
+    )
+    # New show: first_seen after run1 ended.
+    db.insert_show(
+        conn,
+        show(title="Brand New", url="https://almeida.co.uk/new"),
+        now=run2_start + timedelta(seconds=1),
+    )
+    new_shows = db.query_new_shows(conn)
+    assert {s.title for s in new_shows} == {"Brand New"}
+
+
+def test_query_new_shows_empty_when_only_one_scrape(conn: sqlite3.Connection) -> None:
+    now = datetime(2026, 5, 9, 10, 0, tzinfo=UTC)
+    db.record_scrape_run(
+        conn,
+        ScrapeRun(
+            theatre_slug="almeida",
+            started_at=now,
+            finished_at=now,
+            status="success",
+            shows_found=1,
+        ),
+    )
+    db.insert_show(conn, show(title="First-time Show"), now=now)
+    assert db.query_new_shows(conn) == []
 
 
 def test_delete_shows_for_theatre_only_removes_that_theatres_rows(

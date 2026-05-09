@@ -52,12 +52,18 @@ def run_one(
     if enrich:
         shows = [_enrich(s, client) for s in shows]
 
+    # Preserve first_seen_at across --replace by URL: lets the "New shows" query
+    # keep working when a bespoke adapter changes a title shape.
+    prior_first_seen: dict[str, str] = {}
     if replace:
+        prior_first_seen = db.first_seen_by_url(conn, slug)
         db.delete_shows_for_theatre(conn, slug)
 
     insert_at = now()
     for s in shows:
-        db.insert_show(conn, s, now=insert_at)
+        prior = prior_first_seen.get(str(s.url))
+        first_seen = datetime.fromisoformat(prior) if prior else None
+        db.insert_show(conn, s, now=insert_at, first_seen=first_seen)
 
     return _persist_run(
         conn,

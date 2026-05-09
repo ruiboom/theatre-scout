@@ -77,8 +77,21 @@ def upsert_theatres(conn: sqlite3.Connection, theatres: list[Theatre]) -> None:
     conn.commit()
 
 
-def insert_show(conn: sqlite3.Connection, s: Show, *, now: datetime) -> None:
+def insert_show(
+    conn: sqlite3.Connection,
+    s: Show,
+    *,
+    now: datetime,
+    first_seen: datetime | None = None,
+) -> None:
+    """Insert or update a show. `first_seen` is honored only on the initial INSERT.
+
+    Re-inserting an existing (theatre_slug, title, start_date) updates the row but
+    leaves first_seen_at alone — so an explicit `first_seen` only matters when this
+    is a fresh row (e.g. after `--replace` deleted the prior row).
+    """
     iso_now = now.isoformat()
+    iso_first = first_seen.isoformat() if first_seen else iso_now
     conn.execute(
         """
         INSERT INTO shows (
@@ -110,11 +123,19 @@ def insert_show(conn: sqlite3.Connection, s: Show, *, now: datetime) -> None:
             s.price_max,
             str(s.image_url) if s.image_url else None,
             json.dumps(s.raw),
-            iso_now,
+            iso_first,
             iso_now,
         ),
     )
     conn.commit()
+
+
+def first_seen_by_url(conn: sqlite3.Connection, slug: str) -> dict[str, str]:
+    """Map of url -> first_seen_at ISO string for one theatre's existing rows."""
+    rows = conn.execute(
+        "SELECT url, first_seen_at FROM shows WHERE theatre_slug = ?", (slug,)
+    ).fetchall()
+    return {r[0]: r[1] for r in rows}
 
 
 def delete_shows_for_theatre(conn: sqlite3.Connection, slug: str) -> int:
@@ -146,6 +167,10 @@ def record_scrape_run(conn: sqlite3.Connection, run: ScrapeRun) -> int:
 _SHOW_COLS = (
     "theatre_slug, title, show_type, description, url, "
     "start_date, end_date, price_min, price_max, image_url, raw"
+)
+_SHOW_COLS_S = (
+    "s.theatre_slug, s.title, s.show_type, s.description, s.url, "
+    "s.start_date, s.end_date, s.price_min, s.price_max, s.image_url, s.raw"
 )
 
 
@@ -198,6 +223,33 @@ def query_all_theatres(conn: sqlite3.Connection) -> list[Theatre]:
         )
         for r in rows
     ]
+
+
+def query_new_shows(conn: sqlite3.Connection) -> list[Show]:
+    """Shows whose `first_seen_at` is later than their theatre's previous successful scrape.
+
+    Returns [] for theatres with only one successful scrape on record (no baseline yet).
+    """
+    rows = conn.execute(
+        f"""
+        WITH ranked AS (
+            SELECT theatre_slug, finished_at,
+                   ROW_NUMBER() OVER (PARTITION BY theatre_slug ORDER BY started_at DESC) AS rn
+            FROM scrape_runs
+            WHERE status = 'success' AND finished_at IS NOT NULL
+        ),
+        prev AS (
+            SELECT theatre_slug, finished_at AS prev_finished
+            FROM ranked WHERE rn = 2
+        )
+        SELECT {_SHOW_COLS_S}
+        FROM shows s
+        JOIN prev ON prev.theatre_slug = s.theatre_slug
+        WHERE s.first_seen_at > prev.prev_finished
+        ORDER BY s.first_seen_at DESC
+        """
+    ).fetchall()
+    return [_row_to_show(r) for r in rows]
 
 
 def latest_scrape_runs(conn: sqlite3.Connection) -> list[ScrapeRun]:

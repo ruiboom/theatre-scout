@@ -120,6 +120,28 @@ ul.theatres a { color: var(--link); text-decoration: none; font-weight: 500; }
     text-transform: lowercase;
 }
 
+.quick-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+.quick-filters .pill {
+    padding: 0.35rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--fg);
+    text-decoration: none;
+    background: white;
+    font-size: 0.9rem;
+}
+.quick-filters .pill:hover { background: var(--pill); }
+.quick-filters .pill.active {
+    background: var(--fg);
+    color: white;
+    border-color: var(--fg);
+}
+
 form.filters {
     display: flex;
     gap: 0.5rem;

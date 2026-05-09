@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Upcoming shows · Theatre Scout{% endblock %}
 {% block content %}
+<nav class="quick-filters">
+    <a href="{{ pill_urls[""] }}" class="pill {% if not filter_when %}active{% endif %}">All</a>
+    <a href="{{ pill_urls["today"] }}" class="pill {% if filter_when == 'today' %}active{% endif %}">Today</a>
+    <a href="{{ pill_urls["week"] }}" class="pill {% if filter_when == 'week' %}active{% endif %}">This week</a>
+    <a href="{{ pill_urls["new"] }}" class="pill {% if filter_when == 'new' %}active{% endif %}">New</a>
+</nav>
 <form method="get" action="/shows" class="filters">
     <input type="search" name="q" value="{{ q }}" placeholder="Search title…">
     <select name="type">
@@ -15,6 +21,7 @@
             <option value="{{ c }}" {% if filter_cat == c %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
     </select>
+    {% if filter_when %}<input type="hidden" name="when" value="{{ filter_when }}">{% endif %}
     <button type="submit">Filter</button>
 </form>
 <h2>Upcoming shows ({{ shows | length }})</h2>

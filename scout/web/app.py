@@ -5,6 +5,7 @@ import sqlite3
 from collections import Counter
 from collections.abc import Iterator
 from datetime import date as Date
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -94,9 +95,30 @@ def shows_page(
     q: str | None = None,
     type: str | None = None,
     cat: str | None = None,
+    when: str | None = None,
 ) -> object:
     cutoff = Date.fromisoformat(today) if today else Date.today()
-    shows = db.query_upcoming(conn, today=cutoff)
+    if when == "new":
+        shows = db.query_new_shows(conn)
+    else:
+        shows = db.query_upcoming(conn, today=cutoff)
+        if when == "today":
+            shows = [
+                s
+                for s in shows
+                if s.start_date is not None
+                and s.start_date <= cutoff
+                and (s.end_date is None or s.end_date >= cutoff)
+            ]
+        elif when == "week":
+            week_end = cutoff + timedelta(days=7)
+            shows = [
+                s
+                for s in shows
+                if s.start_date is not None
+                and s.start_date <= week_end
+                and (s.end_date is None or s.end_date >= cutoff)
+            ]
     theatres = {t.slug: t for t in load_theatres(theatres_path)}
     if q:
         needle = q.lower()
@@ -109,6 +131,19 @@ def shows_page(
             for s in shows
             if s.theatre_slug in theatres and theatres[s.theatre_slug].category == cat
         ]
+
+    def _pill_url(when_value: str) -> str:
+        parts: list[str] = []
+        if q:
+            parts.append(f"q={q}")
+        if type:
+            parts.append(f"type={type}")
+        if cat:
+            parts.append(f"cat={cat}")
+        if when_value:
+            parts.append(f"when={when_value}")
+        return "/shows" + ("?" + "&".join(parts) if parts else "")
+
     return templates.TemplateResponse(
         request,
         "shows.html",
@@ -118,6 +153,13 @@ def shows_page(
             "q": q or "",
             "filter_type": type or "",
             "filter_cat": cat or "",
+            "filter_when": when or "",
+            "pill_urls": {
+                "": _pill_url(""),
+                "today": _pill_url("today"),
+                "week": _pill_url("week"),
+                "new": _pill_url("new"),
+            },
         },
     )
 

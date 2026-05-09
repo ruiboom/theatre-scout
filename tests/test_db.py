@@ -186,6 +186,25 @@ def test_query_new_shows_returns_only_post_previous_scrape(conn: sqlite3.Connect
     assert {s.title for s in new_shows} == {"Brand New"}
 
 
+def test_last_scrape_at_returns_most_recent_finished(conn: sqlite3.Connection) -> None:
+    earlier = datetime(2026, 5, 8, 9, 0, tzinfo=UTC)
+    later = datetime(2026, 5, 9, 9, 0, tzinfo=UTC)
+    db.record_scrape_run(
+        conn,
+        ScrapeRun(
+            theatre_slug="almeida", started_at=earlier, finished_at=earlier, status="success"
+        ),
+    )
+    db.record_scrape_run(
+        conn, ScrapeRun(theatre_slug="bush", started_at=later, finished_at=later, status="success")
+    )
+    assert db.last_scrape_at(conn) == later
+
+
+def test_last_scrape_at_returns_none_when_never_scraped(conn: sqlite3.Connection) -> None:
+    assert db.last_scrape_at(conn) is None
+
+
 def test_query_new_shows_empty_when_only_one_scrape(conn: sqlite3.Connection) -> None:
     now = datetime(2026, 5, 9, 10, 0, tzinfo=UTC)
     db.record_scrape_run(

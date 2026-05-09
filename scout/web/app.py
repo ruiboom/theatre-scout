@@ -4,8 +4,8 @@ import os
 import sqlite3
 from collections import Counter
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from datetime import date as Date
-from datetime import timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -27,6 +27,33 @@ templates.env.filters["fmt_price"] = lambda p: (
     f"£{p / 100:.2f}" if isinstance(p, int) and p > 0 else ""
 )
 
+
+def _fmt_relative(when: datetime | None, *, now: datetime | None = None) -> str:
+    if when is None:
+        return "never"
+    now = now or datetime.now(UTC)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    delta = now - when
+    secs = int(delta.total_seconds())
+    if secs < 0:
+        return "just now"
+    if secs < 60:
+        return "just now"
+    if secs < 3600:
+        m = secs // 60
+        return f"{m}m ago"
+    if secs < 86400:
+        h = secs // 3600
+        return f"{h}h ago"
+    if secs < 86400 * 7:
+        d = secs // 86400
+        return f"{d}d ago"
+    return when.strftime("%-d %b")
+
+
+templates.env.filters["fmt_relative"] = _fmt_relative
+
 app = FastAPI(title="Theatre Scout")
 app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
 
@@ -47,6 +74,11 @@ def get_conn(db_path: Path = Depends(get_db_path)) -> Iterator[sqlite3.Connectio
         conn.close()
 
 
+def _layout_ctx(conn: sqlite3.Connection) -> dict[str, object]:
+    """Context vars expected by base.html. Merged into every template response."""
+    return {"last_refresh": db.last_scrape_at(conn)}
+
+
 @app.get("/")
 def home(
     request: Request,
@@ -63,6 +95,7 @@ def home(
         request,
         "index.html",
         {
+            **_layout_ctx(conn),
             "by_cat": by_cat,
             "show_counts": show_counts,
             "total_shows": len(upcoming),
@@ -82,7 +115,9 @@ def theatre_page(
         raise HTTPException(status_code=404, detail=f"Unknown theatre: {slug}")
     shows = db.query_by_theatre(conn, slug)
     return templates.TemplateResponse(
-        request, "theatre.html", {"theatre": theatres[slug], "shows": shows}
+        request,
+        "theatre.html",
+        {**_layout_ctx(conn), "theatre": theatres[slug], "shows": shows},
     )
 
 
@@ -148,6 +183,7 @@ def shows_page(
         request,
         "shows.html",
         {
+            **_layout_ctx(conn),
             "shows": shows,
             "theatres": theatres,
             "q": q or "",

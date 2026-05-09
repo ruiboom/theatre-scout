@@ -57,6 +57,28 @@ def client(tmp_path: Path) -> TestClient:
     web_app.app.dependency_overrides.clear()
 
 
+def test_fmt_relative_buckets() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from scout.web.app import _fmt_relative
+
+    now = datetime(2026, 5, 9, 12, 0, tzinfo=UTC)
+    assert _fmt_relative(None, now=now) == "never"
+    assert _fmt_relative(now - timedelta(seconds=10), now=now) == "just now"
+    assert _fmt_relative(now - timedelta(minutes=5), now=now) == "5m ago"
+    assert _fmt_relative(now - timedelta(hours=3), now=now) == "3h ago"
+    assert _fmt_relative(now - timedelta(days=2), now=now) == "2d ago"
+    # Older than a week falls back to a date
+    assert "Apr" in _fmt_relative(now - timedelta(days=20), now=now)
+
+
+def test_home_renders_last_refresh_label(client: TestClient) -> None:
+    r = client.get("/")
+    assert r.status_code == 200
+    # No scrape recorded in the seed fixture → "never"
+    assert "Last: never" in r.text
+
+
 def test_home_lists_categories(client: TestClient) -> None:
     r = client.get("/")
     assert r.status_code == 200

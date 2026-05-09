@@ -225,6 +225,14 @@ def query_all_theatres(conn: sqlite3.Connection) -> list[Theatre]:
     ]
 
 
+def last_scrape_at(conn: sqlite3.Connection) -> datetime | None:
+    """The most recent `finished_at` across all scrape_runs. None if never scraped."""
+    row = conn.execute(
+        "SELECT MAX(finished_at) FROM scrape_runs WHERE finished_at IS NOT NULL"
+    ).fetchone()
+    return datetime.fromisoformat(row[0]) if row and row[0] else None
+
+
 def query_new_shows(conn: sqlite3.Connection) -> list[Show]:
     """Shows whose `first_seen_at` is later than their theatre's previous successful scrape.
 

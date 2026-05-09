@@ -31,6 +31,11 @@ header h1 a { color: var(--fg); text-decoration: none; }
 nav { display: flex; gap: 1rem; align-items: center; }
 nav a { color: var(--link); text-decoration: none; }
 nav .inline { display: inline; margin: 0; }
+.refresh-form { display: inline-flex; align-items: center; gap: 0.5rem; }
+.last-refresh {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
 nav button {
     border: 1px solid var(--border);
     background: white;

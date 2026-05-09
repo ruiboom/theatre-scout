@@ -46,7 +46,7 @@ def test_fetch_calls_client_then_parse(monkeypatch: pytest.MonkeyPatch) -> None:
         status_code = 200
 
     class FakeClient:
-        def get(self, url: str) -> FakeResp:
+        def get(self, url: str, *, stealth: bool = False) -> FakeResp:
             assert url == "https://x.com/whats-on"
             return FakeResp()
 
@@ -64,7 +64,7 @@ def test_fetch_returns_empty_when_client_returns_none() -> None:
             raise AssertionError("parse should not be called")
 
     class BlockedClient:
-        def get(self, url: str) -> None:
+        def get(self, url: str, *, stealth: bool = False) -> None:
             return None
 
     assert FakeAdapter().fetch(BlockedClient()) == []  # type: ignore[arg-type]

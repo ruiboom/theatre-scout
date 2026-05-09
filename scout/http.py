@@ -1,16 +1,27 @@
+"""Polite HTTP client. Internally delegates to Scrapling so we get TLS impersonation
+on the fast path and Patchright-based browser rendering on the stealth path —
+without changing the adapter contract.
+
+Public surface (kept intentionally stable so adapters and tests don't shift):
+    Response          — frozen dataclass with .url / .status_code / .content / .text
+    RateLimiter       — per-host token bucket
+    is_allowed        — robots.txt check helper
+    Client            — Client.get(url, *, stealth=False) -> Response | None
+    USER_AGENT        — informational identifier we report in robots.txt rules
+"""
+
 from __future__ import annotations
 
-import hashlib
+import logging
 import time
 import urllib.parse
 import urllib.robotparser
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
-
-import httpx
 
 USER_AGENT = "TheatreScout/0.1 (+local research bot)"
+
+log = logging.getLogger(__name__)
 
 
 class RateLimiter:
@@ -37,25 +48,6 @@ class RateLimiter:
         self._last_at[host] = self._now()
 
 
-class Cache:
-    """File-backed bytes cache keyed by URL hash. No TTL — fixtures are stable in dev."""
-
-    def __init__(self, dir: Path) -> None:
-        self._dir = Path(dir)
-        self._dir.mkdir(parents=True, exist_ok=True)
-
-    def _path(self, url: str) -> Path:
-        h = hashlib.sha256(url.encode()).hexdigest()
-        return self._dir / f"{h}.bin"
-
-    def get(self, url: str) -> bytes | None:
-        p = self._path(url)
-        return p.read_bytes() if p.is_file() else None
-
-    def put(self, url: str, content: bytes) -> None:
-        self._path(url).write_bytes(content)
-
-
 def is_allowed(url: str, robots_txt: str | None, *, user_agent: str = USER_AGENT) -> bool:
     if not robots_txt:
         return True
@@ -75,37 +67,75 @@ class Response:
         return self.content.decode("utf-8", errors="replace")
 
 
+FetchFn = Callable[[str], Response | None]
+
+
+def _scrapling_fetch(url: str) -> Response | None:
+    """Default fast-path fetch via Scrapling's curl_cffi-based Fetcher (Chrome TLS)."""
+    from scrapling.fetchers import Fetcher
+
+    try:
+        page = Fetcher.get(url, stealthy_headers=True, follow_redirects=True, timeout=20)
+    except Exception as exc:
+        log.warning("fetch failed for %s: %s", url, exc)
+        return None
+    body = page.body if isinstance(page.body, bytes) else str(page).encode("utf-8")
+    return Response(url=str(page.url), status_code=int(page.status), content=body)
+
+
+def _scrapling_stealth_fetch(url: str) -> Response | None:
+    """Slow-path fetch via Scrapling's StealthyFetcher (Patchright headless browser)."""
+    from scrapling.fetchers import StealthyFetcher
+
+    try:
+        page = StealthyFetcher.fetch(
+            url,
+            headless=True,
+            disable_resources=True,
+            network_idle=True,
+            timeout=45000,
+        )
+    except Exception as exc:
+        log.warning("stealth fetch failed for %s: %s", url, exc)
+        return None
+    body = page.body if isinstance(page.body, bytes) else str(page).encode("utf-8")
+    return Response(url=str(page.url), status_code=int(page.status), content=body)
+
+
+def _scrapling_robots_fetch(host: str) -> str | None:
+    """Pull /robots.txt for a host using the fast-path fetcher."""
+    resp = _scrapling_fetch(f"https://{host}/robots.txt")
+    if resp is None or resp.status_code != 200:
+        return None
+    return resp.text
+
+
 class Client:
-    """Polite HTTP client: rate-limited, cached, robots-aware."""
+    """Polite client: rate-limited, robots-aware, with optional stealth escalation."""
 
     def __init__(
         self,
         *,
-        http: httpx.Client | None = None,
         rate_limiter: RateLimiter | None = None,
-        cache: Cache | None = None,
+        fetch_fn: FetchFn | None = None,
+        stealth_fetch_fn: FetchFn | None = None,
         fetch_robots: Callable[[str], str | None] | None = None,
         user_agent: str = USER_AGENT,
     ) -> None:
-        self._http = http or httpx.Client(timeout=20.0, follow_redirects=True)
-        self._http.headers["user-agent"] = user_agent
         self._rate = rate_limiter or RateLimiter()
-        self._cache = cache
-        self._fetch_robots = fetch_robots or _live_robots_fetcher(self._http)
+        self._fetch_fn = fetch_fn or _scrapling_fetch
+        self._stealth_fetch_fn = stealth_fetch_fn or _scrapling_stealth_fetch
+        self._fetch_robots = fetch_robots or _scrapling_robots_fetch
         self._user_agent = user_agent
         self._robots_cache: dict[str, str | None] = {}
 
-    def get(self, url: str) -> Response | None:
+    def get(self, url: str, *, stealth: bool = False) -> Response | None:
         host = urllib.parse.urlparse(url).netloc
         if not self._is_allowed(url, host):
             return None
-        if self._cache is not None and (cached := self._cache.get(url)) is not None:
-            return Response(url=url, status_code=200, content=cached)
         self._rate.wait_for(host)
-        resp = self._http.get(url)
-        if resp.status_code == 200 and self._cache is not None:
-            self._cache.put(url, resp.content)
-        return Response(url=url, status_code=resp.status_code, content=resp.content)
+        fetch = self._stealth_fetch_fn if stealth else self._fetch_fn
+        return fetch(url)
 
     def _is_allowed(self, url: str, host: str) -> bool:
         if host not in self._robots_cache:
@@ -114,14 +144,3 @@ class Client:
             except Exception:
                 self._robots_cache[host] = None
         return is_allowed(url, self._robots_cache[host], user_agent=self._user_agent)
-
-
-def _live_robots_fetcher(http: httpx.Client) -> Callable[[str], str | None]:
-    def fetch(host: str) -> str | None:
-        try:
-            r = http.get(f"https://{host}/robots.txt")
-            return r.text if r.status_code == 200 else None
-        except Exception:
-            return None
-
-    return fetch

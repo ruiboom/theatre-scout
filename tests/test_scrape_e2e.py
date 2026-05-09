@@ -18,7 +18,7 @@ class FixtureClient:
     def __init__(self, fixture_html: str) -> None:
         self._html = fixture_html
 
-    def get(self, url: str):  # type: ignore[no-untyped-def]
+    def get(self, url: str, *, stealth: bool = False):  # type: ignore[no-untyped-def]
         class R:
             text = self._html
             content = self._html.encode()
@@ -61,7 +61,7 @@ def test_enrich_populates_descriptions_and_images(conn) -> None:  # type: ignore
     )
 
     class Client:
-        def get(self, url: str):  # type: ignore[no-untyped-def]
+        def get(self, url: str, *, stealth: bool = False):  # type: ignore[no-untyped-def]
             class R:
                 pass
 
@@ -150,7 +150,7 @@ def test_replace_does_not_run_if_adapter_fails(conn) -> None:  # type: ignore[no
     )
 
     class BoomClient:
-        def get(self, url: str):  # type: ignore[no-untyped-def]
+        def get(self, url: str, *, stealth: bool = False):  # type: ignore[no-untyped-def]
             raise RuntimeError("network down")
 
     run = scraper.run_one("almeida", BoomClient(), conn, now=lambda: now, replace=True)
@@ -161,7 +161,7 @@ def test_replace_does_not_run_if_adapter_fails(conn) -> None:  # type: ignore[no
 
 def test_scrape_failed_adapter_records_failure(conn) -> None:  # type: ignore[no-untyped-def]
     class BoomClient:
-        def get(self, url: str):  # type: ignore[no-untyped-def]
+        def get(self, url: str, *, stealth: bool = False):  # type: ignore[no-untyped-def]
             raise RuntimeError("network down")
 
     run = scraper.run_one(

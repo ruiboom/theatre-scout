@@ -43,3 +43,22 @@ uv run scout serve --port 8765                                 # custom port
 uv sync                                    # re-resolve deps if pyproject changed
 uv run pytest                              # confirm nothing broke
 ```
+
+## Browser binaries (one-time)
+
+7 venues need a real browser to render their listings. Run this once after `uv sync`:
+
+```bash
+uv run scrapling install --force
+```
+
+Downloads Chromium + Patchright (~500MB).
+
+## Rollback
+
+If anything's gone sideways and you want the pre-Scrapling state back:
+
+```bash
+git reset --hard pre-scrapling
+uv sync
+```

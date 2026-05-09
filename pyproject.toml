@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.111",
     "jinja2>=3.1",
     "uvicorn>=0.30",
+    "scrapling[fetchers]>=0.4.7",
 ]
 
 [project.scripts]

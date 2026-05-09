@@ -3,14 +3,26 @@
 Each entry: (slug, listings URL, card selector). The selector was discovered by
 inspecting a saved fixture; bespoke parsing lives in its own module.
 
-If `card_selector` is empty, the adapter still registers but returns no shows
-(used for JS-rendered sites and fetch-failed venues — transparent in scrape output).
+Slugs in `_JS_VENUES` route through the stealth (browser-rendered) fetch path
+because the listing page is either JavaScript-rendered or the venue blocks
+plain HTTP requests.
 """
 
 from __future__ import annotations
 
 from scout.adapters._generic import GenericAdapter
 from scout.adapters.registry import register
+
+# Venues that need a real browser to render content (or to defeat anti-bot blocking).
+_JS_VENUES: set[str] = {
+    "seven-dials-playhouse",
+    "yard",
+    "vaults",
+    "upstairs-at-the-gatehouse",
+    "waterloo-east",
+    "hen-and-chickens",
+    "tabard",
+}
 
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
 _ENTRIES: list[tuple[str, str, str]] = [
@@ -49,9 +61,17 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("pleasance", "https://www.pleasance.co.uk/events", 'a[href*="/event/"]'),
     ("riverside-studios", "https://riversidestudios.co.uk/whats-on/", 'a[href*="/event/"]'),
     ("roundhouse", "https://www.roundhouse.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
-    ("seven-dials-playhouse", "https://www.sevendialsplayhouse.co.uk/whats-on", ""),  # JS-rendered
+    (
+        "seven-dials-playhouse",
+        "https://www.sevendialsplayhouse.co.uk/whats-on",
+        'a[href*="/whats-on/"]',
+    ),
     ("other-palace", "https://theotherpalace.co.uk/whats-on/", "article"),
-    ("yard", "https://www.theyardtheatre.co.uk/whats-on", ""),  # JS-rendered
+    (
+        "yard",
+        "https://www.theyardtheatre.co.uk/whats-on",
+        'a[href*="/events/"]:not([href*="/tickets/"])',
+    ),
     ("underbelly-boulevard", "https://underbellyboulevard.com/tickets/", ".tile"),
     ("unicorn", "https://www.unicorntheatre.com/whats-on/", 'a[href*="/events/"]'),
     ("wiltons", "https://wiltons.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
@@ -61,19 +81,23 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("drayton-arms", "https://thedraytonarmstheatre.co.uk/index.php", 'a[href*="/show/"]'),
     ("etcetera", "https://www.etceteratheatrecamden.com/events/", 'a[href*="/event/"]'),
     ("finborough", "https://www.finboroughtheatre.co.uk/productions", 'a[href*="/productions/"]'),
-    ("hen-and-chickens", "https://henandchickens.com/whats-on/", ""),  # fetch failed
+    ("hen-and-chickens", "https://henandchickens.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("jermyn-street", "https://www.jermynstreettheatre.co.uk/now-next/", 'a[href*="/show/"]'),
     ("kings-head", "https://kingsheadtheatre.com/whats-on", 'a[href*="/whats-on/"]'),
     ("old-red-lion", "https://weareoldred.co.uk/", 'a[href*="/event/"]'),
     ("omnibus", "https://www.omnibus-clapham.org/", 'a[href*="/event/"]'),
     ("southwark-playhouse", "https://southwarkplayhouse.co.uk/", 'a[href*="/productions/"]'),
-    ("tabard", "https://tabardtheatre.co.uk/whats-on/", ""),  # fetch failed
+    ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
-    ("vaults", "https://www.thevaults.london/whats-on", ""),  # JS-rendered
+    ("vaults", "https://www.thevaults.london/whats-on", 'a[href*="/event"]'),
     ("tower", "https://www.towertheatre.org.uk/whats-on/", 'a[href*="/event/"]'),
     ("union", "https://uniontheatre.biz/whats-on/", 'a[href*="/show/"]'),
-    ("upstairs-at-the-gatehouse", "https://upstairsatthegatehouse.com/whats-on/", ""),  # JS
-    ("waterloo-east", "https://www.waterlooeast.co.uk/", ""),  # JS-rendered
+    (
+        "upstairs-at-the-gatehouse",
+        "https://upstairsatthegatehouse.com/whats-on/",
+        'a[href*="/show"]',
+    ),
+    ("waterloo-east", "https://www.waterlooeast.co.uk/", 'a[href*="/show"]'),
     ("white-bear", "https://www.whitebeartheatre.co.uk/", 'a[href*="/show/"]'),
     # --- outer ---
     ("alexandra-palace", "https://www.alexandrapalace.com/whats-on/", 'a[href*="/whats-on/"]'),
@@ -108,7 +132,12 @@ def _make_adapter(slug: str, url: str, card_selector: str) -> type[GenericAdapte
     cls = type(
         cls_name,
         (GenericAdapter,),
-        {"slug": slug, "url": url, "card_selector": card_selector},
+        {
+            "slug": slug,
+            "url": url,
+            "card_selector": card_selector,
+            "requires_js": slug in _JS_VENUES,
+        },
     )
     register(cls)
     return cls

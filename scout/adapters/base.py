@@ -7,7 +7,7 @@ from scout.models import Show
 
 
 class _ClientLike(Protocol):
-    def get(self, url: str) -> object | None: ...
+    def get(self, url: str, *, stealth: bool = False) -> object | None: ...
 
 
 class BaseAdapter(ABC):
@@ -22,7 +22,7 @@ class BaseAdapter(ABC):
         """Pure parser: HTML → list of Show. No IO."""
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        resp = client.get(self.url)
+        resp = client.get(self.url, stealth=self.requires_js)
         if resp is None:
             return []
         text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(

@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class _ClientLike(Protocol):
-    def get(self, url: str) -> object | None: ...
+    def get(self, url: str, *, stealth: bool = False) -> object | None: ...
 
 
 def _utcnow() -> datetime:

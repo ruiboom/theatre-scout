@@ -106,6 +106,39 @@ Decisions taken autonomously during the build that the user should review later.
 
 ---
 
+## Scrapling Tier 1 — drop-in replacement of `scout/http.py` engine
+
+**Question**: Should we add `scrapling[fetchers]` and route the 7 broken venues through `StealthyFetcher`?
+
+**Decision taken**: Yes, Tier 1 implemented. Pre-change state is tagged `pre-scrapling` (commit `47f29cc`). Rollback at any time:
+
+```bash
+git reset --hard pre-scrapling
+uv sync
+```
+
+**What changed**:
+- `scout/http.py` rewritten — same public surface (`Client.get(url, *, stealth=False)`, `Response`, `RateLimiter`, `is_allowed`) but internally uses `scrapling.fetchers.Fetcher` (curl_cffi + Chrome TLS impersonation) and `scrapling.fetchers.StealthyFetcher` (Patchright headless browser) on the `stealth=True` path.
+- `Cache` class deleted (was unused outside tests).
+- `scout/adapters/base.py` — `BaseAdapter.fetch(client)` now passes `stealth=self.requires_js`. `_ClientLike` Protocol updated.
+- `scout/adapters/bulk.py` — 7 venues marked `requires_js=True` (`yard`, `vaults`, `seven-dials-playhouse`, `upstairs-at-the-gatehouse`, `waterloo-east`, `hen-and-chickens`, `tabard`); empty selectors swapped for link-pattern guesses now that we expect rendered HTML.
+
+**What didn't change**:
+- Adapters, models, DB, web UI, scraper orchestrator, CLI — all untouched.
+- `httpx` and `beautifulsoup4` still in deps (used by adapters / templates / test fixtures).
+- Per-host rate limiter and robots.txt check — kept (Scrapling's spider has these but we're not using the spider yet).
+
+**Trade-offs accepted**:
+- Default fetcher now sends a Chrome-impersonating User-Agent rather than `TheatreScout/0.1 (+local research bot)`. Less polite but defeats anti-bot blocking that was failing 2 venues silently. Robots.txt check still uses our identifier name.
+- Stealth fetches launch a real headless browser per call (~30–45s each). Full scrape time grows by ~5 min when 7 stealth venues are included.
+- `scrapling install --force` was run once locally; it pulls Patchright + Chromium browser binaries (~500MB). Not in our git, but committed `uv.lock` records the package versions.
+
+**Validation**:
+- 206 unit/integration tests pass; mypy + ruff clean.
+- Live: `almeida` (regular path) returns 8 shows as before. `yard` and `hen-and-chickens` now fetch successfully via stealth (previously 0 / failed). Selectors still need tuning for the 7 stealth venues — bespoke adapters or selector refinement is follow-up work, separate from Tier 1.
+
+---
+
 ## M0 — Python version floor
 
 **Question**: BUILD.md says "Python 3.11+". System has 3.12.3. Pin floor at 3.11 or 3.12?

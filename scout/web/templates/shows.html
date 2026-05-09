@@ -21,17 +21,18 @@
 {% endmacro %}
 
 {% macro card(s) %}
-    <a class="card" href="{{ s.url }}" target="_blank" rel="noopener">
+    <div class="card">
         <div class="thumb">
             {% if s.image_url %}<img src="{{ s.image_url }}" alt="" loading="lazy">{% endif %}
         </div>
         <div class="card-meta">{{ s.show_type }}</div>
-        <div class="card-title">{{ s.title }}</div>
-        <div class="card-sub">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</div>
+        <a class="card-title" href="{{ s.url }}" target="_blank" rel="noopener"
+           {% if s.description %}title="{{ s.description }}"{% endif %}>{{ s.title }} <span class="card-title-arrow" aria-hidden="true">↗</span></a>
+        <a class="card-sub" href="/theatres/{{ s.theatre_slug }}">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</a>
         <div class="card-dates">
             {% if s.start_date %}{{ s.start_date.strftime('%d %b') }}{% if s.end_date %} – {{ s.end_date.strftime('%d %b') }}{% endif %}{% endif %}
         </div>
-    </a>
+    </div>
 {% endmacro %}
 
 <section class="hero" style="padding: 48px 0 32px;">

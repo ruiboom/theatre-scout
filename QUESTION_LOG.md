@@ -106,6 +106,33 @@ Decisions taken autonomously during the build that the user should review later.
 
 ---
 
+## Tier 3 follow-ups — cross-theatre parallelism + host round-robin
+
+**Question**: First Tier 3 cut barely moved the needle (~24 min). The workers were all hitting the same host on the dominant venue (Pleasance, 322 shows on one host) and blocking on its rate limit.
+
+**Decisions taken**:
+
+1. **Refactor `run_all` into 3 phases** (`cae2a48`):
+   - Phase 1: serial listing scrape per adapter (writes nothing yet).
+   - Phase 2: ONE big ThreadPoolExecutor across every show from every theatre.
+   - Phase 3: serial DB writes per theatre.
+
+   `run_one` is unchanged — single-theatre flow keeps internal `_enrich_many`.
+
+2. **Round-robin shows by host** before submission (latest commit):
+   - `_host_round_robin` interleaves shows so workers immediately fan across distinct hosts.
+   - Without it, workers all grab the dominant host first and stall behind its 1 req/sec rate limit while other hosts sit idle.
+
+**Result**: full enrich+replace dropped from ~25 min (Tier 2) to **7 min 47 s** with `--workers 16`. ~3.2× total speedup vs Tier 2; ~3.5× vs Tier 0.
+
+**The floor we're hitting now**: Pleasance has 322 shows on `cptheatre.co.uk`. At 1 req/sec/host that's 5.4 min minimum no matter how many workers we throw at it. Plus ~2 min serial listing scrape = ~7-8 min total. Further speedups would need either lower per-host rate (less polite) or skipping more enrichment.
+
+**Trade-offs accepted**:
+- The 3-phase pipeline holds all listing results in memory before DB write. ~1,200 shows is trivial for this — but if we ever hit ~100k shows we'd want streaming.
+- DB writes happen *after* all enrichment finishes, so a crash mid-enrichment loses everything. Pre-existing rows survive (we don't delete until just before insert when `--replace`). For a 7-min job this is fine; we'd revisit if we go to a longer pipeline.
+
+---
+
 ## Scrapling Tier 3 — parallel enrichment via ThreadPoolExecutor
 
 **Question**: Tier 2 saved only ~1.5 min on the full scrape because the dominant cost (~22 min) is serial detail-page fetches for `--enrich`. Add concurrency?

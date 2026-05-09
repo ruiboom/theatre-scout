@@ -3,21 +3,21 @@
 {% block content %}
 
 {% macro index_row(idx, s) %}
-    <a class="row" href="{{ s.url }}" target="_blank" rel="noopener">
+    <div class="row">
         <div class="row-idx">{{ '%03d' % idx }}</div>
         <div class="thumb">
             {% if s.image_url %}<img src="{{ s.image_url }}" alt="" loading="lazy">{% endif %}
         </div>
         <div class="row-body">
-            <div class="row-title">{{ s.title }}</div>
+            <a class="row-title" href="{{ s.url }}" target="_blank" rel="noopener"
+               {% if s.description %}title="{{ s.description }}"{% endif %}>{{ s.title }} <span class="row-title-arrow" aria-hidden="true">↗</span></a>
             <div class="row-tag">{{ s.show_type }}</div>
         </div>
-        <div class="row-venue">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</div>
+        <a class="row-venue" href="/theatres/{{ s.theatre_slug }}">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</a>
         <div class="row-dates">
             {% if s.start_date %}{{ s.start_date.strftime('%d %b') }}{% if s.end_date %} – {{ s.end_date.strftime('%d %b') }}{% endif %}{% endif %}
         </div>
-        <div class="row-aside">↗</div>
-    </a>
+    </div>
 {% endmacro %}
 
 {% macro card(s) %}

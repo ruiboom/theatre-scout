@@ -19,6 +19,7 @@ Public surface (kept stable so adapters and tests don't shift):
 from __future__ import annotations
 
 import logging
+import threading
 import time
 import urllib.parse
 import urllib.robotparser
@@ -33,7 +34,9 @@ log = logging.getLogger(__name__)
 
 
 class RateLimiter:
-    """Per-host token bucket. Sleeps just enough to keep `min_interval` between hits."""
+    """Per-host token bucket. Thread-safe: each host has its own lock so concurrent
+    callers to the same host serialize, while callers to different hosts proceed
+    in parallel. Sleeps just enough to keep `min_interval` between hits."""
 
     def __init__(
         self,
@@ -46,14 +49,25 @@ class RateLimiter:
         self._now = now
         self._sleep = sleep
         self._last_at: dict[str, float] = {}
+        self._registry_lock = threading.Lock()
+        self._host_locks: dict[str, threading.Lock] = {}
+
+    def _lock_for(self, host: str) -> threading.Lock:
+        with self._registry_lock:
+            lock = self._host_locks.get(host)
+            if lock is None:
+                lock = threading.Lock()
+                self._host_locks[host] = lock
+            return lock
 
     def wait_for(self, host: str) -> None:
-        last = self._last_at.get(host)
-        if last is not None:
-            wait = self._min_interval - (self._now() - last)
-            if wait > 0:
-                self._sleep(wait)
-        self._last_at[host] = self._now()
+        with self._lock_for(host):
+            last = self._last_at.get(host)
+            if last is not None:
+                wait = self._min_interval - (self._now() - last)
+                if wait > 0:
+                    self._sleep(wait)
+            self._last_at[host] = self._now()
 
 
 def is_allowed(url: str, robots_txt: str | None, *, user_agent: str = USER_AGENT) -> bool:
@@ -163,9 +177,7 @@ class Client:
         if self._fetcher_session is None:
             from scrapling.fetchers import FetcherSession
 
-            cm = FetcherSession(
-                impersonate="chrome", stealthy_headers=True, timeout=20, retries=2
-            )
+            cm = FetcherSession(impersonate="chrome", stealthy_headers=True, timeout=20, retries=2)
             handle = cm.__enter__()
             self._fetcher_session = (handle, cm)
         return self._fetcher_session[0]

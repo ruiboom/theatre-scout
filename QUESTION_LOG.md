@@ -106,6 +106,38 @@ Decisions taken autonomously during the build that the user should review later.
 
 ---
 
+## Scrapling Tier 3 — parallel enrichment via ThreadPoolExecutor
+
+**Question**: Tier 2 saved only ~1.5 min on the full scrape because the dominant cost (~22 min) is serial detail-page fetches for `--enrich`. Add concurrency?
+
+**Decision taken**: Yes. Pre-change state tagged `pre-scrapling-tier-3`. Rollback chain:
+
+```bash
+git reset --hard pre-scrapling-tier-3   # back to Tier 2 (sessions, no parallelism)
+git reset --hard pre-scrapling-tier-2   # back to Tier 1
+git reset --hard pre-scrapling          # back to pre-Scrapling
+```
+
+**What changed**:
+- `scout/http.py` — `RateLimiter` now thread-safe via per-host `threading.Lock`. Hosts serialize internally (one waiter per host) but different hosts don't block each other.
+- `scout/scraper.py` — new `_enrich_many(shows, client, workers)` helper using `concurrent.futures.ThreadPoolExecutor`. `run_one` / `run_all` accept a `workers: int` parameter (default 1 = serial).
+- `scout/cli.py` — `scrape --workers N` flag.
+- 2 new concurrency tests in `test_http.py` (same-host serializes, different-hosts parallel) and 1 e2e test confirming parallel and serial enrichment yield identical descriptions.
+
+**Trade-offs accepted**:
+- Listing scrape stays serial. Adding parallelism there would touch the SQLite write path, which sqlite3 doesn't allow across threads on a single connection without `check_same_thread=False` + locking. Listing is only ~3 min of the 25 min total; the cost/benefit isn't there.
+- Sharing a single `FetcherSession` across worker threads relies on curl_cffi being thread-safe; the docs claim it is and the test suite passes. If a real concurrency bug shows up under load we'd switch to a per-thread session pool.
+- The `StealthySession` is single-tab synchronous; stealth venues still run serial. To parallelize them we'd need `AsyncStealthySession` with a `max_pages` tab pool — async runtime, bigger refactor. Worthwhile only if we add many more JS-rendered venues.
+- Workers > ~50 has diminishing returns: only ~50 distinct hosts, each capped at 1 req/sec. 16 is the sweet spot.
+
+**Validation**:
+- 209 unit/integration tests pass; mypy + ruff clean.
+- Same-host concurrent test verifies the per-host gap holds under threads.
+- Different-hosts concurrent test verifies hosts run in parallel.
+- Live timing tracked separately.
+
+---
+
 ## Scrapling Tier 2 — sessions + bs4/lxml/httpx removed
 
 **Question**: Migrate the parsing layer from BeautifulSoup to Scrapling's Selector, and reuse Scrapling sessions across requests instead of spawning fresh ones?

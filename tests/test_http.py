@@ -120,6 +120,53 @@ def test_client_robots_failure_does_not_break_fetch() -> None:
     assert r is not None and r.status_code == 200
 
 
+def test_rate_limiter_concurrent_same_host_serializes() -> None:
+    """Two threads hitting the same host should observe the per-host gap."""
+    import threading
+    import time
+
+    rl = RateLimiter(min_interval=0.05)
+    times: list[float] = []
+    barrier = threading.Barrier(2)
+
+    def worker() -> None:
+        barrier.wait()  # release both threads at once
+        rl.wait_for("example.com")
+        times.append(time.monotonic())
+
+    t1 = threading.Thread(target=worker)
+    t2 = threading.Thread(target=worker)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    delta = abs(times[1] - times[0])
+    assert delta >= 0.04, f"expected ≥ 40ms gap on same host, got {delta * 1000:.1f}ms"
+
+
+def test_rate_limiter_concurrent_different_hosts_parallel() -> None:
+    """Two threads on different hosts should NOT block each other."""
+    import threading
+    import time
+
+    rl = RateLimiter(min_interval=0.5)
+    rl.wait_for("a.example.com")  # prime so next call to a.* would wait
+    rl.wait_for("b.example.com")  # prime so next call to b.* would wait
+
+    start = time.monotonic()
+    threads = [
+        threading.Thread(target=rl.wait_for, args=("a.example.com",)),
+        threading.Thread(target=rl.wait_for, args=("b.example.com",)),
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    elapsed = time.monotonic() - start
+    # Each host individually waits ~0.5s; in parallel total should be ~0.5s, not 1s.
+    assert elapsed < 0.85, f"expected ~0.5s parallel, got {elapsed:.2f}s"
+
+
 @pytest.fixture(autouse=True)
 def _no_real_network(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Safety net: any test that reaches a real socket fails loudly."""

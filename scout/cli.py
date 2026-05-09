@@ -61,6 +61,11 @@ def scrape(
         "--replace",
         help="Wipe each theatre's existing rows before re-inserting. Use after adapter changes.",
     ),
+    workers: int = typer.Option(
+        1,
+        "--workers",
+        help="Parallel workers for the enrich step. Per-host rate limit still applies.",
+    ),
 ) -> None:
     """Scrape one or all theatres and persist shows to the local DB."""
     adapters.load_all()
@@ -68,11 +73,13 @@ def scrape(
 
     with Client() as client:
         if theatre:
-            run = scraper.run_one(theatre, client, conn, enrich=enrich, replace=replace)
+            run = scraper.run_one(
+                theatre, client, conn, enrich=enrich, replace=replace, workers=workers
+            )
             _print_run(run)
             raise typer.Exit(0 if run.status == "success" else 1)
 
-        runs = scraper.run_all(client, conn, enrich=enrich, replace=replace)
+        runs = scraper.run_all(client, conn, enrich=enrich, replace=replace, workers=workers)
         typer.echo(f"Scraped {len(runs)} theatres:")
         for r in runs:
             _print_run(r)

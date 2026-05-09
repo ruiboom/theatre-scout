@@ -80,6 +80,40 @@ def test_enrich_populates_descriptions_and_images(conn) -> None:  # type: ignore
     assert dolls.image_url == "https://cdn.almeida.co.uk/hero/dolls.jpg"
 
 
+def test_enrich_parallel_workers_produce_same_descriptions(conn) -> None:  # type: ignore[no-untyped-def]
+    """workers=4 must yield identical results to workers=1 — purely a speed knob."""
+    listing_html = FIXTURE.read_text()
+    detail_html = (
+        "<html><head>"
+        '<meta name="description" content="A bold revival of '
+        "Henrik Ibsen's classic, staged with electric urgency.\">"
+        '<meta property="og:image" content="https://cdn.almeida.co.uk/hero.jpg">'
+        "</head></html>"
+    )
+
+    class Client:
+        def get(self, url: str, *, stealth: bool = False):  # type: ignore[no-untyped-def]
+            class R:
+                pass
+
+            R.text = detail_html if "/whats-on/a-dolls-house" in url else listing_html
+            R.content = R.text.encode()
+            R.status_code = 200
+            return R
+
+    scraper.run_one(
+        "almeida",
+        Client(),
+        conn,
+        now=lambda: datetime(2026, 5, 7, tzinfo=UTC),
+        enrich=True,
+        workers=4,
+    )
+    rows = db.query_by_theatre(conn, "almeida")
+    by_title = {r.title: r for r in rows}
+    assert "bold revival" in by_title["A Doll's House"].description
+
+
 def test_replace_drops_stale_rows_before_insert(conn) -> None:  # type: ignore[no-untyped-def]
     # Pre-existing stale row that this scrape would otherwise leave behind.
     now = datetime(2026, 5, 7, 12, 0, tzinfo=UTC)

@@ -14,10 +14,13 @@ That's the fast loop: scrape, then serve. Or hit the **Refresh** button in the w
 ## With descriptions (slower)
 
 ```bash
-uv run scout scrape --enrich   # fetches each show's detail page, ~15-20 min
+uv run scout scrape --enrich --workers 16   # ~3-5 min with parallelism
+uv run scout scrape --enrich                # serial enrich, ~25 min
 ```
 
-Use this overnight or when you want full descriptions. Without `--enrich` you get the title and dates extracted from the listing card; descriptions populate where the listing exposes them, otherwise stay empty.
+The `--workers` flag fans the per-show detail-page fetches across a thread pool. The per-host rate limit (1 req/sec) still applies, so two shows on the same venue still serialize — but venues run in parallel. With 16 workers and ~50 distinct hosts, the enrich step shrinks from ~22 min to a couple of minutes.
+
+Without `--enrich` you get titles and dates from the listing cards only; descriptions populate where the listing exposes them, otherwise stay empty.
 
 ## After adapter changes
 
@@ -56,9 +59,11 @@ Downloads Chromium + Patchright (~500MB).
 
 ## Rollback
 
-If anything's gone sideways and you want the pre-Scrapling state back:
+If anything's gone sideways:
 
 ```bash
-git reset --hard pre-scrapling
-uv sync
+git reset --hard pre-scrapling-tier-3   # back to known-good Tier 2 (no parallelism)
+git reset --hard pre-scrapling-tier-2   # back to Tier 1 (Scrapling but bs4 still in use)
+git reset --hard pre-scrapling          # pre-Scrapling entirely (httpx + bs4)
+uv sync                                  # always re-sync after a reset
 ```

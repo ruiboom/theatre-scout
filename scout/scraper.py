@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from typing import Protocol
 
@@ -30,6 +31,7 @@ def run_one(
     now: Callable[[], datetime] = _utcnow,
     enrich: bool = False,
     replace: bool = False,
+    workers: int = 1,
 ) -> ScrapeRun:
     started = now()
     adapter_cls = get_adapter(slug)
@@ -50,7 +52,7 @@ def run_one(
         )
 
     if enrich:
-        shows = [_enrich(s, client) for s in shows]
+        shows = _enrich_many(shows, client, workers=workers)
 
     # Preserve first_seen_at across --replace by URL: lets the "New shows" query
     # keep working when a bespoke adapter changes a title shape.
@@ -84,11 +86,27 @@ def run_all(
     now: Callable[[], datetime] = _utcnow,
     enrich: bool = False,
     replace: bool = False,
+    workers: int = 1,
 ) -> list[ScrapeRun]:
     return [
-        run_one(a.slug, client, conn, now=now, enrich=enrich, replace=replace)
+        run_one(a.slug, client, conn, now=now, enrich=enrich, replace=replace, workers=workers)
         for a in all_adapters()
     ]
+
+
+def _enrich_many(shows: list[Show], client: _ClientLike, *, workers: int = 1) -> list[Show]:
+    """Enrich shows. With workers > 1, fetches across hosts run in parallel; the
+    per-host rate limiter (in `Client`) still serializes within each host."""
+    if workers <= 1 or len(shows) <= 1:
+        return [_enrich(s, client) for s in shows]
+    out: list[Show] = list(shows)
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="scout-enrich") as ex:
+        for i, fut in [(i, ex.submit(_enrich, s, client)) for i, s in enumerate(shows)]:
+            try:
+                out[i] = fut.result()
+            except Exception as exc:
+                log.warning("enrich worker failed for %s: %s", shows[i].url, exc)
+    return out
 
 
 def _enrich(s: Show, client: _ClientLike) -> Show:

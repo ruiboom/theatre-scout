@@ -9,9 +9,10 @@ from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 
+from scout.text import clean_description, clean_text, is_boilerplate
+
 EVENT_TYPES = {"Event", "TheaterEvent", "ComedyEvent", "DanceEvent", "MusicEvent", "Festival"}
 DESC_MAX_CHARS = 600
-_WS_RE = re.compile(r"\s+")
 _TINY_IMG_RE = re.compile(r"(spacer|pixel|blank|tracking|1x1|\.gif$)", re.IGNORECASE)
 
 
@@ -32,17 +33,21 @@ def extract_description(html: str) -> str:
             types = node.get("@type")
             ts = [types] if isinstance(types, str) else (types or [])
             if any(t in EVENT_TYPES for t in ts):
-                desc = node.get("description")
-                if isinstance(desc, str) and len(desc) >= 30:
-                    return _truncate(_clean(desc))
+                raw = node.get("description")
+                if isinstance(raw, str):
+                    cleaned = clean_description(raw)
+                    if len(cleaned) >= 30:
+                        return _truncate(cleaned)
 
     # 2. Meta tags
     for sel in ['meta[name="description"]', 'meta[property="og:description"]']:
         m = soup.select_one(sel)
         if isinstance(m, Tag):
             content = m.get("content")
-            if isinstance(content, str) and len(content.strip()) >= 30:
-                return _truncate(_clean(content))
+            if isinstance(content, str):
+                cleaned = clean_description(content)
+                if len(cleaned) >= 30:
+                    return _truncate(cleaned)
 
     # 3. First meaningful <p> within main/article
     for container_sel in ["main article", "main", "article"]:
@@ -50,8 +55,8 @@ def extract_description(html: str) -> str:
         if not container:
             continue
         for p in container.find_all("p"):
-            text = _clean(p.get_text(" ", strip=True))
-            if len(text) >= 60:
+            text = clean_text(p.get_text(" ", strip=True))
+            if len(text) >= 60 and not is_boilerplate(text):
                 return _truncate(text)
 
     return ""
@@ -135,7 +140,7 @@ def _flatten(data: Any) -> list[dict[str, Any]]:
 
 
 def _clean(text: str) -> str:
-    return _WS_RE.sub(" ", text).strip()
+    return clean_text(text)
 
 
 def _truncate(text: str) -> str:

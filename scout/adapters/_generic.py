@@ -20,6 +20,7 @@ from scout.adapters._jsonld import parse_jsonld
 from scout.adapters.base import BaseAdapter
 from scout.classify import classify
 from scout.models import Show, ShowType
+from scout.text import clean_text
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def _extract_description(card: Tag, title: str) -> str:
     """Pick the longest meaningful <p> in `card` that isn't the title or boilerplate."""
     best = ""
     for p in card.find_all("p"):
-        text = p.get_text(" ", strip=True)
+        text = clean_text(p.get_text(" ", strip=True))
         if not text or text == title or len(text) < 20:
             continue
         if _DATE_LIKE.match(text) or _GENERIC_BUTTON.match(text):

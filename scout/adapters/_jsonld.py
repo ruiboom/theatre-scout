@@ -11,6 +11,7 @@ from typing import Any
 from bs4 import BeautifulSoup
 
 from scout.models import Show, ShowType
+from scout.text import clean_description, clean_text
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ def _node_to_show(node: dict[str, Any], theatre_slug: str, base_url: str) -> Sho
     if show_type is None:
         return None
 
-    name = (node.get("name") or "").strip()
+    name = clean_text(node.get("name") or "")
     url = node.get("url")
     if not name or not url:
         return None
@@ -78,7 +79,7 @@ def _node_to_show(node: dict[str, Any], theatre_slug: str, base_url: str) -> Sho
             theatre_slug=theatre_slug,
             title=name,
             show_type=show_type,
-            description=(node.get("description") or "").strip(),
+            description=clean_description(node.get("description") or ""),
             url=full_url,
             start_date=_parse_date(node.get("startDate")),
             end_date=_parse_date(node.get("endDate")),

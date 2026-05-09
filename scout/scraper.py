@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import urllib.parse
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -43,9 +44,7 @@ def run_one(
     try:
         shows = adapter_cls().fetch(client)
     except Exception as exc:
-        return _persist_run(
-            conn, _failed_run(slug, started, now(), f"{type(exc).__name__}: {exc}")
-        )
+        return _persist_run(conn, _failed_run(slug, started, now(), f"{type(exc).__name__}: {exc}"))
 
     if enrich:
         shows = _enrich_many(shows, client, workers=workers)
@@ -163,16 +162,44 @@ def _failed_run(slug: str, started: datetime, finished: datetime, error: str) ->
 
 def _enrich_many(shows: list[Show], client: _ClientLike, *, workers: int = 1) -> list[Show]:
     """Enrich shows. With workers > 1, fetches across hosts run in parallel; the
-    per-host rate limiter (in `Client`) still serializes within each host."""
+    per-host rate limiter (in `Client`) still serializes within each host.
+
+    Submission order is round-robin by host so the worker pool fans out across
+    distinct hosts immediately — otherwise a single dominant host (e.g. one
+    venue with 300 shows) would absorb every worker and stall behind its own
+    rate limit before the other hosts even get touched.
+    """
     if workers <= 1 or len(shows) <= 1:
         return [_enrich(s, client) for s in shows]
+    submission_order = _host_round_robin(shows)
     out: list[Show] = list(shows)
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="scout-enrich") as ex:
-        for i, fut in [(i, ex.submit(_enrich, s, client)) for i, s in enumerate(shows)]:
+        futures = [(i, ex.submit(_enrich, shows[i], client)) for i in submission_order]
+        for i, fut in futures:
             try:
                 out[i] = fut.result()
             except Exception as exc:
                 log.warning("enrich worker failed for %s: %s", shows[i].url, exc)
+    return out
+
+
+def _host_round_robin(shows: list[Show]) -> list[int]:
+    """Return original-index order such that adjacent items are on different hosts."""
+    by_host: dict[str, list[int]] = {}
+    for i, s in enumerate(shows):
+        host = urllib.parse.urlparse(str(s.url)).netloc
+        by_host.setdefault(host, []).append(i)
+    out: list[int] = []
+    queues = [iter(idxs) for idxs in by_host.values()]
+    while queues:
+        next_queues = []
+        for q in queues:
+            try:
+                out.append(next(q))
+                next_queues.append(q)
+            except StopIteration:
+                continue
+        queues = next_queues
     return out
 
 

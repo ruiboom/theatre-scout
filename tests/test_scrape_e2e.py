@@ -80,6 +80,26 @@ def test_enrich_populates_descriptions_and_images(conn) -> None:  # type: ignore
     assert dolls.image_url == "https://cdn.almeida.co.uk/hero/dolls.jpg"
 
 
+def test_host_round_robin_interleaves_by_host() -> None:
+    from scout.models import Show
+    from scout.scraper import _host_round_robin
+
+    shows = [
+        Show(theatre_slug="a", title="A1", url="https://host-a.example/1"),
+        Show(theatre_slug="a", title="A2", url="https://host-a.example/2"),
+        Show(theatre_slug="a", title="A3", url="https://host-a.example/3"),
+        Show(theatre_slug="b", title="B1", url="https://host-b.example/1"),
+        Show(theatre_slug="b", title="B2", url="https://host-b.example/2"),
+        Show(theatre_slug="c", title="C1", url="https://host-c.example/1"),
+    ]
+    order = _host_round_robin(shows)
+    # First 3 picks should be one per distinct host (in dict-insertion order: a, b, c)
+    titles = [shows[i].title for i in order]
+    assert titles[:3] == ["A1", "B1", "C1"]
+    # All original shows present
+    assert sorted(titles) == sorted(s.title for s in shows)
+
+
 def test_enrich_parallel_workers_produce_same_descriptions(conn) -> None:  # type: ignore[no-untyped-def]
     """workers=4 must yield identical results to workers=1 — purely a speed knob."""
     listing_html = FIXTURE.read_text()

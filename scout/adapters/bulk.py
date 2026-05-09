@@ -90,7 +90,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("white-bear", "https://www.whitebeartheatre.co.uk/", 'a[href*="/show/"]'),
     # --- outer ---
     ("alexandra-palace", "https://www.alexandrapalace.com/whats-on/", 'a[href*="/whats-on/"]'),
-    ("bloomsbury", "https://www.bloomsburytheatre.com/whats-on/", 'a[href*="/event/"]'),
     (
         "churchill",
         "https://trafalgartickets.com/churchill-theatre-bromley/en-GB",

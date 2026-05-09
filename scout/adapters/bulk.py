@@ -27,7 +27,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     # --- major ---
     ("bridge-theatre", "https://www.bridgetheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("bush", "https://www.bushtheatre.co.uk/whats-on/", 'a[href*="/event/"]'),
-    ("donmar-warehouse", "https://www.donmarwarehouse.com/whats-on/", 'a[href*="/events/"]'),
     ("hampstead", "https://www.hampsteadtheatre.com/whats-on/main-stage/", 'a[href*="/whats-on/"]'),
     ("kiln", "https://kilntheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("lyric-hammersmith", "https://lyric.co.uk/whats-on/", 'a[href*="/shows/"]'),

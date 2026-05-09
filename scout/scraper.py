@@ -10,7 +10,6 @@ from typing import Protocol
 
 from scout import db
 from scout.adapters.registry import all_adapters, get_adapter
-from scout.enrich import extract_description, extract_image
 from scout.models import ScrapeRun, Show
 
 log = logging.getLogger(__name__)
@@ -204,14 +203,25 @@ def _host_round_robin(shows: list[Show]) -> list[int]:
 
 
 def _enrich(s: Show, client: _ClientLike) -> Show:
-    """Fetch the show detail page and copy the description and (better) image onto the Show.
+    """Fetch the show detail page and merge adapter-extracted fields onto the Show.
 
-    Skips the network call if both fields are already filled from the listing page.
+    Dispatches via the adapter so per-venue enrichers can pull structured data
+    (e.g. prices) the generic extractors don't know about. Merge policy:
+      - description: only set if empty (listing copy wins when present).
+      - image_url: always overwrite (detail-page hero usually beats listing thumb).
+      - price_min / price_max: only set if currently None.
     """
-    if s.description and s.image_url:
+    if s.description and s.image_url and s.price_min is not None:
         return s
     try:
-        resp = client.get(str(s.url))
+        adapter_cls = get_adapter(s.theatre_slug)
+    except KeyError:
+        return s
+    # Detail pages on SPA venues need the same browser-render path the listing
+    # used; otherwise the synopsis isn't in the static HTML and `extract_*`
+    # would return nothing.
+    try:
+        resp = client.get(str(s.url), stealth=adapter_cls.requires_js)
     except Exception as exc:
         log.warning("enrich: %s fetch failed: %s", s.url, exc)
         return s
@@ -220,14 +230,20 @@ def _enrich(s: Show, client: _ClientLike) -> Show:
     text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
         "utf-8", errors="replace"
     )
-    updates: dict[str, str] = {}
-    if not s.description:
-        desc = extract_description(text)
-        if desc:
-            updates["description"] = desc
-    img = extract_image(text, str(s.url))
-    if img:
-        updates["image_url"] = img
+    try:
+        candidates = adapter_cls().enrich(text, str(s.url))
+    except Exception as exc:
+        log.warning("enrich: %s parse failed: %s", s.url, exc)
+        return s
+    updates: dict[str, object] = {}
+    if "description" in candidates and not s.description:
+        updates["description"] = candidates["description"]
+    if "image_url" in candidates and candidates["image_url"]:
+        updates["image_url"] = candidates["image_url"]
+    if "price_min" in candidates and s.price_min is None:
+        updates["price_min"] = candidates["price_min"]
+    if "price_max" in candidates and s.price_max is None:
+        updates["price_max"] = candidates["price_max"]
     if not updates:
         return s
     return s.model_copy(update=updates)

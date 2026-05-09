@@ -20,9 +20,6 @@ from scout.adapters.registry import register
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
     "yard",
-    "vaults",
-    "upstairs-at-the-gatehouse",
-    "waterloo-east",
 }
 
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
@@ -30,7 +27,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     # --- major ---
     ("bridge-theatre", "https://www.bridgetheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("bush", "https://www.bushtheatre.co.uk/whats-on/", 'a[href*="/event/"]'),
-    ("donmar-warehouse", "https://www.donmarwarehouse.com/whats-on/", 'a[href*="/events/"]'),
     ("hampstead", "https://www.hampsteadtheatre.com/whats-on/main-stage/", 'a[href*="/whats-on/"]'),
     ("kiln", "https://kilntheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("lyric-hammersmith", "https://lyric.co.uk/whats-on/", 'a[href*="/shows/"]'),
@@ -89,19 +85,10 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("southwark-playhouse", "https://southwarkplayhouse.co.uk/", 'a[href*="/productions/"]'),
     ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
-    ("vaults", "https://www.thevaults.london/whats-on", 'a[href*="/event"]'),
     ("tower", "https://www.towertheatre.org.uk/whats-on/", 'a[href*="/event/"]'),
-    ("union", "https://uniontheatre.biz/whats-on/", 'a[href*="/show/"]'),
-    (
-        "upstairs-at-the-gatehouse",
-        "https://upstairsatthegatehouse.com/whats-on/",
-        'a[href*="/show"]',
-    ),
-    ("waterloo-east", "https://www.waterlooeast.co.uk/", 'a[href*="/show"]'),
     ("white-bear", "https://www.whitebeartheatre.co.uk/", 'a[href*="/show/"]'),
     # --- outer ---
     ("alexandra-palace", "https://www.alexandrapalace.com/whats-on/", 'a[href*="/whats-on/"]'),
-    ("bloomsbury", "https://www.bloomsburytheatre.com/whats-on/", 'a[href*="/event/"]'),
     (
         "churchill",
         "https://trafalgartickets.com/churchill-theatre-bromley/en-GB",

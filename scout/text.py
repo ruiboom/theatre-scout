@@ -9,6 +9,10 @@ from scrapling.parser import Selector
 
 _WS_RE = re.compile(r"\s+")
 _LITERAL_BACKSLASH_NEWLINE_RE = re.compile(r"\\[nrt]")
+# Zero-width characters often leak in from rich-text-editor copy/paste; Python's
+# `\s` doesn't match them so they survive `_WS_RE` and `.strip()` and end up
+# rendered as invisible cruft at the front of descriptions.
+_ZERO_WIDTH_RE = re.compile(r"[​‌‍﻿]")
 
 _BOILERPLATE_RE = re.compile(
     r"\b(members? and friends|return to details|logged in|please log in|sign in|"
@@ -29,6 +33,7 @@ def clean_text(text: str) -> str:
     # Some sources double-encode (`&amp;lt;` → `&lt;` → `<`); a second pass is harmless.
     decoded = html.unescape(html.unescape(text))
     decoded = _LITERAL_BACKSLASH_NEWLINE_RE.sub(" ", decoded)
+    decoded = _ZERO_WIDTH_RE.sub("", decoded)
     if "<" in decoded and ">" in decoded:
         decoded = Selector(decoded).get_all_text(separator=" ", strip=True)
     return _WS_RE.sub(" ", decoded).strip()

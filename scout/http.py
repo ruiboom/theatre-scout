@@ -24,6 +24,7 @@ import time
 import urllib.parse
 import urllib.robotparser
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from types import TracebackType
 from typing import Any
@@ -115,6 +116,13 @@ class Client:
         # on the original CM while using the entered handle for requests.
         self._fetcher_session: tuple[Any, Any] | None = None
         self._stealth_session: tuple[Any, Any] | None = None
+        # Patchright greenlets bind to the thread that opens the session, so a
+        # session created on the main thread (Phase 1 listings) crashes when
+        # a worker thread tries to use it (Phase 2 enrichment). Pin every
+        # stealth fetch to one dedicated background thread that owns the
+        # browser end-to-end. Lazy-launched on first stealth call.
+        self._stealth_executor: ThreadPoolExecutor | None = None
+        self._stealth_executor_lock = threading.Lock()
 
     # ---- context manager so sessions get closed cleanly ----
     def __enter__(self) -> Client:
@@ -136,6 +144,18 @@ class Client:
             except Exception as e:
                 log.warning("error closing fetcher session: %s", e)
             self._fetcher_session = None
+        # Stealth session must be torn down on the same thread that opened it.
+        if self._stealth_executor is not None:
+            try:
+                self._stealth_executor.submit(self._close_stealth_on_owner_thread).result(
+                    timeout=10
+                )
+            except Exception as e:
+                log.warning("error closing stealth session: %s", e)
+            self._stealth_executor.shutdown(wait=True)
+            self._stealth_executor = None
+
+    def _close_stealth_on_owner_thread(self) -> None:
         if self._stealth_session is not None:
             _, cm = self._stealth_session
             try:
@@ -166,12 +186,26 @@ class Client:
     def _stealth_fetch(self, url: str) -> Response | None:
         if self._stealth_fetch_fn_override is not None:
             return self._stealth_fetch_fn_override(url)
+        # Hand the work to the dedicated browser-owner thread; calling threads
+        # block on the future, which gives us serialisation for free.
+        return self._get_stealth_executor().submit(self._stealth_fetch_in_owner, url).result()
+
+    def _stealth_fetch_in_owner(self, url: str) -> Response | None:
         try:
             page = self._stealth().fetch(url)
         except Exception as exc:
             log.warning("stealth fetch failed for %s: %s", url, exc)
             return None
         return _to_response(page)
+
+    def _get_stealth_executor(self) -> ThreadPoolExecutor:
+        if self._stealth_executor is None:
+            with self._stealth_executor_lock:
+                if self._stealth_executor is None:
+                    self._stealth_executor = ThreadPoolExecutor(
+                        max_workers=1, thread_name_prefix="scout-stealth"
+                    )
+        return self._stealth_executor
 
     def _fetcher(self) -> Any:
         if self._fetcher_session is None:

@@ -16,6 +16,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from scout import coords as coords_mod
 from scout import db
 from scout.models import Show, Theatre
 from scout.theatres import load as load_theatres
@@ -23,6 +24,7 @@ from scout.theatres import load as load_theatres
 ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DB_PATH = ROOT / "data" / "theatre-scout.db"
 DEFAULT_THEATRES_PATH = ROOT / "theatres.yaml"
+DEFAULT_COORDS_PATH = ROOT / "theatre-coords.yaml"
 
 WEB_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=WEB_DIR / "templates")
@@ -68,6 +70,14 @@ def get_db_path() -> Path:
 
 def get_theatres_path() -> Path:
     return Path(os.environ.get("SCOUT_THEATRES_PATH") or DEFAULT_THEATRES_PATH)
+
+
+def get_coords_path(theatres_path: Path = Depends(get_theatres_path)) -> Path:
+    explicit = os.environ.get("SCOUT_COORDS_PATH")
+    if explicit:
+        return Path(explicit)
+    # Default: a sidecar next to theatres.yaml.
+    return theatres_path.parent / "theatre-coords.yaml"
 
 
 def get_conn(db_path: Path = Depends(get_db_path)) -> Iterator[sqlite3.Connection]:
@@ -133,15 +143,22 @@ def theatre_page(
     request: Request,
     conn: sqlite3.Connection = Depends(get_conn),
     theatres_path: Path = Depends(get_theatres_path),
+    coords_path: Path = Depends(get_coords_path),
 ) -> object:
     theatres = {t.slug: t for t in load_theatres(theatres_path)}
     if slug not in theatres:
         raise HTTPException(status_code=404, detail=f"Unknown theatre: {slug}")
     shows = db.query_by_theatre(conn, slug)
+    coord = coords_mod.load(coords_path).get(slug)
     return templates.TemplateResponse(
         request,
         "theatre.html",
-        {**_layout_ctx(conn), "theatre": theatres[slug], "shows": shows},
+        {
+            **_layout_ctx(conn),
+            "theatre": theatres[slug],
+            "shows": shows,
+            "coord": coord,
+        },
     )
 
 

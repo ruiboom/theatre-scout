@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ theatre.name }} · Theatre Scout{% endblock %}
+
+{% block head_extras %}
+{% if coord %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endif %}
+{% endblock %}
+
 {% block content %}
 
 <div class="crumb">
@@ -18,7 +25,11 @@
         </div>
     </div>
     <div class="show-r">
-        <div class="show-still"></div>
+        {% if coord %}
+            <div class="show-map" id="venue-map" data-lat="{{ coord[0] }}" data-lon="{{ coord[1] }}" data-name="{{ theatre.name }}"></div>
+        {% else %}
+            <div class="show-still"></div>
+        {% endif %}
     </div>
 </section>
 
@@ -51,4 +62,36 @@
     <p class="empty">No shows scraped yet for this theatre. Hit Refresh to fetch.</p>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+{% if coord %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var el = document.getElementById('venue-map');
+  if (!el || !window.L) return;
+  var lat = parseFloat(el.dataset.lat);
+  var lon = parseFloat(el.dataset.lon);
+  var name = el.dataset.name;
+  var map = L.map(el, { zoomControl: true, scrollWheelZoom: false, attributionControl: true })
+    .setView([lat, lon], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  // Square ink marker — divIcon avoids Leaflet's default rounded blue pin.
+  var icon = L.divIcon({
+    className: 'ts-marker',
+    html: '<span class="ts-marker-dot" aria-hidden="true"></span>',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+  });
+  L.marker([lat, lon], { icon: icon, title: name }).addTo(map);
+  // Aspect-ratio sizing resolves after first paint — recompute so all tiles load.
+  requestAnimationFrame(function () { map.invalidateSize(); });
+  window.addEventListener('load', function () { map.invalidateSize(); });
+})();
+</script>
+{% endif %}
 {% endblock %}

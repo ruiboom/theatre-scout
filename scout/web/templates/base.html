@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/img/logo-mark.svg">
     <link rel="stylesheet" href="/static/theatre-scout.css">
     <link rel="stylesheet" href="/static/style.css">
+    {% block head_extras %}{% endblock %}
 </head>
 <body>
 <header class="bar">
@@ -42,5 +43,6 @@
     <div>© Theatre Scout · London only · Daily index</div>
     <div>Local directory · 68 venues</div>
 </footer>
+{% block scripts %}{% endblock %}
 </body>
 </html>

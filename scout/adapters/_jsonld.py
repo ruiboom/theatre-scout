@@ -8,7 +8,7 @@ import urllib.parse
 from datetime import date
 from typing import Any
 
-from bs4 import BeautifulSoup
+from scrapling.parser import Selector
 
 from scout.models import Show, ShowType
 from scout.text import clean_description, clean_text
@@ -27,10 +27,10 @@ EVENT_TYPE_TO_SHOW_TYPE: dict[str, ShowType] = {
 
 
 def parse_jsonld(html: str, theatre_slug: str, base_url: str) -> list[Show]:
-    soup = BeautifulSoup(html, "lxml")
+    page = Selector(html)
     shows: list[Show] = []
-    for script in soup.find_all("script", type="application/ld+json"):
-        text = script.string or script.get_text()
+    for script in page.css('script[type="application/ld+json"]'):
+        text = script.text or script.get_all_text()
         if not text:
             continue
         try:

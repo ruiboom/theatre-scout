@@ -13,7 +13,7 @@ import logging
 import re
 import urllib.parse
 
-from bs4 import BeautifulSoup, Tag
+from scrapling.parser import Selector
 
 from scout.adapters._html import parse_date_range
 from scout.adapters._jsonld import parse_jsonld
@@ -32,11 +32,11 @@ _GENERIC_BUTTON = re.compile(
 DESC_MAX_CHARS = 240
 
 
-def _extract_description(card: Tag, title: str) -> str:
+def _extract_description(card: Selector, title: str) -> str:
     """Pick the longest meaningful <p> in `card` that isn't the title or boilerplate."""
     best = ""
     for p in card.find_all("p"):
-        text = clean_text(p.get_text(" ", strip=True))
+        text = clean_text(p.get_all_text(separator=" ", strip=True))
         if not text or text == title or len(text) < 20:
             continue
         if _DATE_LIKE.match(text) or _GENERIC_BUTTON.match(text):
@@ -51,6 +51,11 @@ def _extract_description(card: Tag, title: str) -> str:
         cut = truncated.rsplit(" ", 1)[0]
         return cut + "…"
     return best
+
+
+def _attrib_get(el: Selector, key: str) -> str | None:
+    val = el.attrib.get(key)
+    return str(val) if val else None
 
 
 class GenericAdapter(BaseAdapter):
@@ -70,10 +75,10 @@ class GenericAdapter(BaseAdapter):
         return self._parse_cards(html, base_url)
 
     def _parse_cards(self, html: str, base_url: str) -> list[Show]:
-        soup = BeautifulSoup(html, "lxml")
+        page = Selector(html)
         seen_urls: set[str] = set()
         out: list[Show] = []
-        for card in soup.select(self.card_selector):
+        for card in page.css(self.card_selector):
             show = self._card_to_show(card, base_url)
             if show is None:
                 continue
@@ -83,37 +88,40 @@ class GenericAdapter(BaseAdapter):
             out.append(show)
         return out
 
-    def _card_to_show(self, card: Tag, base_url: str) -> Show | None:
+    def _card_to_show(self, card: Selector, base_url: str) -> Show | None:
         # When the selector itself is an anchor (e.g. a[href*="/whats-on/"]), treat
         # the link as the card; pull title from its text and look at the parent for dates.
-        if card.name == "a" and card.has_attr("href"):
-            link_el: Tag | None = card
-            title = card.get_text(" ", strip=True)
-            text_source: Tag = card.parent or card
+        is_link_card = card.tag == "a" and "href" in card.attrib
+        if is_link_card:
+            link_el: Selector | None = card
+            title = card.get_all_text(separator=" ", strip=True)
+            text_source = card.parent if card.parent is not None else card
         else:
-            title_el = card.select_one(self.title_selector)
-            link_el = card.find("a", href=True) if isinstance(card, Tag) else None
-            if not title_el or not link_el:
+            title_el = card.css(self.title_selector).first
+            link_el = card.css("a[href]").first
+            if title_el is None or link_el is None:
                 return None
-            title = title_el.get_text(" ", strip=True)
+            title = title_el.get_all_text(separator=" ", strip=True)
             text_source = card
         if not title or len(title) > 200 or link_el is None:
             return None
-        href = str(link_el["href"])
-        if href.startswith("#") or href.startswith("javascript:"):
+        href = _attrib_get(link_el, "href") or ""
+        if not href or href.startswith(("#", "javascript:")):
             return None
         url = urllib.parse.urljoin(base_url, href)
-        text = text_source.get_text(" ", strip=True)
+        text = text_source.get_all_text(separator=" ", strip=True)
         start, end = parse_date_range(text)
         if self.require_date and start is None:
             return None
         img_el = (
-            card.find("img")
-            if card.name != "a"
-            else (card.parent.find("img") if card.parent else None)
+            (card.parent.css("img").first if card.parent is not None else None)
+            if is_link_card
+            else card.css("img").first
         )
-        image = (img_el.get("src") or img_el.get("data-src")) if isinstance(img_el, Tag) else None
-        image_url = urllib.parse.urljoin(base_url, str(image)) if image else None
+        image = None
+        if img_el is not None:
+            image = _attrib_get(img_el, "src") or _attrib_get(img_el, "data-src")
+        image_url = urllib.parse.urljoin(base_url, image) if image else None
         description = _extract_description(text_source, title)
         show_type = classify(f"{title} {description}", default=self.default_show_type)
         try:

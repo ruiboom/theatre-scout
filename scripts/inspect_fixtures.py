@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from bs4 import BeautifulSoup
+from scrapling.parser import Selector
 
 from scout.theatres import load
 
@@ -57,9 +57,9 @@ CANDIDATES = [
 ]
 
 
-def score_selector(soup: BeautifulSoup, sel: str) -> tuple[int, int]:
+def score_selector(page: Selector, sel: str) -> tuple[int, int]:
     """Returns (n_matches, n_with_title_and_link)."""
-    matches = soup.select(sel)
+    matches = page.css(sel)
     n = len(matches)
     if n == 0:
         return 0, 0
@@ -67,22 +67,22 @@ def score_selector(soup: BeautifulSoup, sel: str) -> tuple[int, int]:
     for m in matches:
         # If selector is a link, treat the link itself as the card
         if sel.startswith("a["):
-            if m.get_text(strip=True):
+            if m.get_all_text(strip=True):
                 good += 1
             continue
-        title = m.find(["h1", "h2", "h3", "h4"])
-        link = m.find("a", href=True)
-        if title and link:
+        title = m.css("h1, h2, h3, h4").first
+        link = m.css("a[href]").first
+        if title is not None and link is not None:
             good += 1
     return n, good
 
 
 def best_selector(html: str) -> tuple[str, int] | None:
-    soup = BeautifulSoup(html, "lxml")
+    page = Selector(html)
     best = None
     best_score = 0
     for sel in CANDIDATES:
-        n, good = score_selector(soup, sel)
+        n, good = score_selector(page, sel)
         # Prefer 5-100 matches, mostly with title+link
         if 3 <= good <= 100 and good > best_score:
             best_score = good

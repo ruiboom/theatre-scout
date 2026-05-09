@@ -65,21 +65,21 @@ def scrape(
     """Scrape one or all theatres and persist shows to the local DB."""
     adapters.load_all()
     conn = _open_db()
-    client = Client()
 
-    if theatre:
-        run = scraper.run_one(theatre, client, conn, enrich=enrich, replace=replace)
-        _print_run(run)
-        raise typer.Exit(0 if run.status == "success" else 1)
+    with Client() as client:
+        if theatre:
+            run = scraper.run_one(theatre, client, conn, enrich=enrich, replace=replace)
+            _print_run(run)
+            raise typer.Exit(0 if run.status == "success" else 1)
 
-    runs = scraper.run_all(client, conn, enrich=enrich, replace=replace)
-    typer.echo(f"Scraped {len(runs)} theatres:")
-    for r in runs:
-        _print_run(r)
-    failed = sum(1 for r in runs if r.status == "failed")
-    succeeded = sum(1 for r in runs if r.status == "success")
-    typer.echo(f"\n{succeeded} ok, {failed} failed")
-    raise typer.Exit(1 if failed and succeeded == 0 else 0)
+        runs = scraper.run_all(client, conn, enrich=enrich, replace=replace)
+        typer.echo(f"Scraped {len(runs)} theatres:")
+        for r in runs:
+            _print_run(r)
+        failed = sum(1 for r in runs if r.status == "failed")
+        succeeded = sum(1 for r in runs if r.status == "success")
+        typer.echo(f"\n{succeeded} ok, {failed} failed")
+        raise typer.Exit(1 if failed and succeeded == 0 else 0)
 
 
 @app.command(name="list")

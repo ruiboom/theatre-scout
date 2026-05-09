@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 
-from bs4 import BeautifulSoup
+from scrapling.parser import Selector
 
 _WS_RE = re.compile(r"\s+")
 _LITERAL_BACKSLASH_NEWLINE_RE = re.compile(r"\\[nrt]")
@@ -30,7 +30,7 @@ def clean_text(text: str) -> str:
     decoded = html.unescape(html.unescape(text))
     decoded = _LITERAL_BACKSLASH_NEWLINE_RE.sub(" ", decoded)
     if "<" in decoded and ">" in decoded:
-        decoded = BeautifulSoup(decoded, "html.parser").get_text(" ", strip=True)
+        decoded = Selector(decoded).get_all_text(separator=" ", strip=True)
     return _WS_RE.sub(" ", decoded).strip()
 
 

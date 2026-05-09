@@ -106,6 +106,37 @@ Decisions taken autonomously during the build that the user should review later.
 
 ---
 
+## Scrapling Tier 2 — sessions + bs4/lxml/httpx removed
+
+**Question**: Migrate the parsing layer from BeautifulSoup to Scrapling's Selector, and reuse Scrapling sessions across requests instead of spawning fresh ones?
+
+**Decision taken**: Yes, Tier 2 implemented. Pre-change state tagged `pre-scrapling-tier-2` (post-Tier-1 known good). Rollback chain:
+
+```bash
+# Roll back to pre-Tier-2 (still on Scrapling, still has bs4):
+git reset --hard pre-scrapling-tier-2 && uv sync
+
+# Roll back further to pre-Scrapling entirely:
+git reset --hard pre-scrapling && uv sync
+```
+
+**What changed**:
+- `scout/http.py` — `Client` now lazy-inits a `FetcherSession` (curl_cffi connection pool) and `StealthySession` (single Patchright browser instance). Both close cleanly via `Client.__exit__`. CLI and web `/refresh` now use `with Client() as client:`.
+- `scout/adapters/_jsonld.py`, `scout/adapters/_generic.py`, `scout/adapters/almeida.py`, `scout/adapters/park_theatre.py`, `scout/enrich.py`, `scout/text.py`, and the two scripts in `scripts/` — all migrated from `bs4.BeautifulSoup` to `scrapling.parser.Selector`. API differences absorbed (`get_text(' ', strip=True)` → `get_all_text(separator=' ', strip=True)`, `el.find('a', href=True)` → `el.css('a[href]').first`, etc.).
+- `pyproject.toml` — dropped `beautifulsoup4` and `lxml` from runtime deps (Scrapling brings lxml itself). `httpx` moved to dev-only because FastAPI's `TestClient` still needs it.
+- `pyproject.toml` `pytest.filterwarnings` — added an ignore for `lxml`'s `strip_cdata` DeprecationWarning. Comes from inside Scrapling's Selector init; not actionable on our side.
+
+**Trade-offs accepted**:
+- 30+ test cases that mocked `httpx.MockTransport` had to be replaced with mocked `fetch_fn`/`stealth_fetch_fn` callables. Cleaner contract; tests are now decoupled from any specific HTTP library.
+- Stealth session is single-tab (sync `StealthySession`). Concurrent stealth fetching would require `AsyncStealthySession` and an async runtime — that's Tier 3 territory.
+- Selector tag/attribute API is *almost* drop-in for bs4 but not exact: e.g. `Tag.name` → `Selector.tag`, `Tag.has_attr(k)` → `k in selector.attrib`. Migrations are mechanical but case-by-case.
+
+**Validation**:
+- 206 unit/integration tests pass; mypy + ruff clean.
+- Live: Almeida fast path returns 8 shows as before. Full enrich+replace timing tracked.
+
+---
+
 ## Scrapling Tier 1 — drop-in replacement of `scout/http.py` engine
 
 **Question**: Should we add `scrapling[fetchers]` and route the 7 broken venues through `StealthyFetcher`?

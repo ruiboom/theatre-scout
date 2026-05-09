@@ -250,5 +250,6 @@ def refresh(
     from scout.http import Client
 
     adapters.load_all()
-    scraper.run_all(Client(), conn)
+    with Client() as client:
+        scraper.run_all(client, conn)
     return RedirectResponse("/", status_code=303)

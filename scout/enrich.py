@@ -7,7 +7,7 @@ import re
 import urllib.parse
 from typing import Any
 
-from bs4 import BeautifulSoup, Tag
+from scrapling.parser import Selector
 
 from scout.text import clean_description, clean_text, is_boilerplate
 
@@ -16,34 +16,41 @@ DESC_MAX_CHARS = 600
 _TINY_IMG_RE = re.compile(r"(spacer|pixel|blank|tracking|1x1|\.gif$)", re.IGNORECASE)
 
 
-def extract_description(html: str) -> str:
-    """Best-effort description from a show detail page. Returns "" if nothing usable."""
-    soup = BeautifulSoup(html, "lxml")
-
-    # 1. JSON-LD Event description
-    for script in soup.find_all("script", type="application/ld+json"):
-        text = script.string or script.get_text()
+def _jsonld_nodes(page: Selector) -> list[dict[str, Any]]:
+    """All JSON-LD payloads on the page, flattened to dict nodes."""
+    out: list[dict[str, Any]] = []
+    for script in page.css('script[type="application/ld+json"]'):
+        text = script.text or script.get_all_text()
         if not text:
             continue
         try:
             data = json.loads(text)
         except json.JSONDecodeError:
             continue
-        for node in _flatten(data):
-            types = node.get("@type")
-            ts = [types] if isinstance(types, str) else (types or [])
-            if any(t in EVENT_TYPES for t in ts):
-                raw = node.get("description")
-                if isinstance(raw, str):
-                    cleaned = clean_description(raw)
-                    if len(cleaned) >= 30:
-                        return _truncate(cleaned)
+        out.extend(_flatten(data))
+    return out
+
+
+def extract_description(html: str) -> str:
+    """Best-effort description from a show detail page. Returns "" if nothing usable."""
+    page = Selector(html)
+
+    # 1. JSON-LD Event description
+    for node in _jsonld_nodes(page):
+        types = node.get("@type")
+        ts = [types] if isinstance(types, str) else (types or [])
+        if any(t in EVENT_TYPES for t in ts):
+            raw = node.get("description")
+            if isinstance(raw, str):
+                cleaned = clean_description(raw)
+                if len(cleaned) >= 30:
+                    return _truncate(cleaned)
 
     # 2. Meta tags
     for sel in ['meta[name="description"]', 'meta[property="og:description"]']:
-        m = soup.select_one(sel)
-        if isinstance(m, Tag):
-            content = m.get("content")
+        m = page.css(sel).first
+        if m is not None:
+            content = m.attrib.get("content")
             if isinstance(content, str):
                 cleaned = clean_description(content)
                 if len(cleaned) >= 30:
@@ -51,11 +58,11 @@ def extract_description(html: str) -> str:
 
     # 3. First meaningful <p> within main/article
     for container_sel in ["main article", "main", "article"]:
-        container = soup.select_one(container_sel)
-        if not container:
+        container = page.css(container_sel).first
+        if container is None:
             continue
         for p in container.find_all("p"):
-            text = clean_text(p.get_text(" ", strip=True))
+            text = clean_text(p.get_all_text(separator=" ", strip=True))
             if len(text) >= 60 and not is_boilerplate(text):
                 return _truncate(text)
 
@@ -64,42 +71,32 @@ def extract_description(html: str) -> str:
 
 def extract_image(html: str, base_url: str) -> str | None:
     """Best-effort hero image URL from a show detail page. Returns None if nothing usable."""
-    soup = BeautifulSoup(html, "lxml")
+    page = Selector(html)
 
     # 1. JSON-LD Event image — usually the canonical poster
-    for script in soup.find_all("script", type="application/ld+json"):
-        text = script.string or script.get_text()
-        if not text:
-            continue
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            continue
-        for node in _flatten(data):
-            types = node.get("@type")
-            ts = [types] if isinstance(types, str) else (types or [])
-            if any(t in EVENT_TYPES for t in ts):
-                url = _coerce_image_field(node.get("image"))
-                if url:
-                    return urllib.parse.urljoin(base_url, url)
+    for node in _jsonld_nodes(page):
+        types = node.get("@type")
+        ts = [types] if isinstance(types, str) else (types or [])
+        if any(t in EVENT_TYPES for t in ts):
+            url = _coerce_image_field(node.get("image"))
+            if url:
+                return urllib.parse.urljoin(base_url, url)
 
     # 2. Open Graph + Twitter card images (next-best canonical signal)
     for sel in ['meta[property="og:image"]', 'meta[name="twitter:image"]']:
-        m = soup.select_one(sel)
-        if isinstance(m, Tag):
-            content = m.get("content")
+        m = page.css(sel).first
+        if m is not None:
+            content = m.attrib.get("content")
             if isinstance(content, str) and content.strip():
                 return urllib.parse.urljoin(base_url, content.strip())
 
     # 3. First non-trivial <img> in main content
     for container_sel in ["main article", "main", "article"]:
-        container = soup.select_one(container_sel)
-        if not container:
+        container = page.css(container_sel).first
+        if container is None:
             continue
         for img in container.find_all("img"):
-            if not isinstance(img, Tag):
-                continue
-            src = img.get("src") or img.get("data-src")
+            src = img.attrib.get("src") or img.attrib.get("data-src")
             if not isinstance(src, str) or not src:
                 continue
             if _TINY_IMG_RE.search(src):
@@ -137,10 +134,6 @@ def _flatten(data: Any) -> list[dict[str, Any]]:
         else:
             out.append(data)
     return out
-
-
-def _clean(text: str) -> str:
-    return clean_text(text)
 
 
 def _truncate(text: str) -> str:

@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 from urllib.parse import urljoin
 
-import httpx
-from bs4 import BeautifulSoup
+from scrapling.fetchers import FetcherSession
+from scrapling.parser import Selector
 
 from scout.theatres import load
 
@@ -33,10 +35,10 @@ EVENT_TYPES = {"Event", "TheaterEvent", "ComedyEvent", "DanceEvent", "MusicEvent
 
 
 def has_jsonld_events(html: str) -> int:
-    soup = BeautifulSoup(html, "lxml")
+    page = Selector(html)
     count = 0
-    for script in soup.find_all("script", type="application/ld+json"):
-        text = script.string or script.get_text()
+    for script in page.css('script[type="application/ld+json"]'):
+        text = script.text or script.get_all_text()
         if not text:
             continue
         try:
@@ -51,7 +53,7 @@ def has_jsonld_events(html: str) -> int:
     return count
 
 
-def _flatten(d):  # type: ignore[no-untyped-def]
+def _flatten(d: Any) -> Iterator[dict[str, Any]]:
     if isinstance(d, list):
         for x in d:
             yield from _flatten(x)
@@ -63,15 +65,15 @@ def _flatten(d):  # type: ignore[no-untyped-def]
 
 
 def looks_js_rendered(html: str) -> bool:
-    soup = BeautifulSoup(html, "lxml")
-    for s in soup(["script", "style", "noscript"]):
-        s.decompose()
-    text = soup.get_text(strip=True)
+    """Strip script/style/noscript and see how much rendered text remains."""
+    page = Selector(html)
+    # Selector is read-only; collapse via CSS exclusion in get_all_text via ignore_tags.
+    text = page.get_all_text(separator=" ", strip=True, ignore_tags=("script", "style", "noscript"))
     return len(text) < 800
 
 
 def guess_event_selector(html: str) -> str:
-    soup = BeautifulSoup(html, "lxml")
+    page = Selector(html)
     candidates = [
         "[class*=event-card]",
         "[class*=production-card]",
@@ -87,35 +89,34 @@ def guess_event_selector(html: str) -> str:
         "article",
     ]
     for sel in candidates:
-        n = len(soup.select(sel))
+        n = len(page.css(sel))
         if 3 <= n <= 100:
             return f"{sel} ({n})"
     return "(none)"
 
 
-def fetch_first_ok(client: httpx.Client, base_url: str) -> tuple[str, str] | None:
+def fetch_first_ok(session: Any, base_url: str) -> tuple[str, str] | None:
     base = base_url if base_url.endswith("/") else base_url + "/"
     for path in LISTING_PATHS:
         url = urljoin(base, path)
         try:
-            r = client.get(url, follow_redirects=True, timeout=20.0)
+            r = session.get(url, timeout=20)
         except Exception as exc:
             print(f"      {url}: ERROR {exc}")
             continue
-        if r.status_code == 200 and r.text:
-            return str(r.url), r.text
-        print(f"      {url}: {r.status_code}")
+        if r.status == 200 and r.body:
+            return str(r.url), r.text or r.body.decode("utf-8", errors="replace")
+        print(f"      {url}: {r.status}")
     return None
 
 
 def main() -> None:
     theatres = load(ROOT / "theatres.yaml")
-    headers = {"user-agent": USER_AGENT}
-    rows: list[dict] = []  # type: ignore[type-arg]
-    with httpx.Client(headers=headers) as client:
+    rows: list[dict[str, Any]] = []
+    with FetcherSession(impersonate="chrome", stealthy_headers=True) as session:
         for t in theatres:
             print(f"\n{t.slug:<32}  {t.url}")
-            result = fetch_first_ok(client, str(t.url))
+            result = fetch_first_ok(session, str(t.url))
             if result is None:
                 rows.append({"slug": t.slug, "status": "FETCH-FAIL", "url": str(t.url)})
                 continue

@@ -1,8 +1,14 @@
-"""Polite HTTP client. Internally delegates to Scrapling so we get TLS impersonation
-on the fast path and Patchright-based browser rendering on the stealth path —
-without changing the adapter contract.
+"""Polite HTTP client. Backed by Scrapling sessions:
 
-Public surface (kept intentionally stable so adapters and tests don't shift):
+- A `FetcherSession` (curl_cffi + Chrome TLS) for the fast path. Connection-pooled.
+- A `StealthySession` (Patchright headless browser) for the stealth path. Browser
+  is launched once per Client and reused across stealth venues.
+
+Both sessions are lazy-initialised; a `Client` that never sees a stealth call
+never launches a browser. Always use `Client` as a context manager (or call
+`close()` explicitly) so the underlying connections / browser shut down cleanly.
+
+Public surface (kept stable so adapters and tests don't shift):
     Response          — frozen dataclass with .url / .status_code / .content / .text
     RateLimiter       — per-host token bucket
     is_allowed        — robots.txt check helper
@@ -18,6 +24,8 @@ import urllib.parse
 import urllib.robotparser
 from collections.abc import Callable
 from dataclasses import dataclass
+from types import TracebackType
+from typing import Any
 
 USER_AGENT = "TheatreScout/0.1 (+local research bot)"
 
@@ -70,46 +78,6 @@ class Response:
 FetchFn = Callable[[str], Response | None]
 
 
-def _scrapling_fetch(url: str) -> Response | None:
-    """Default fast-path fetch via Scrapling's curl_cffi-based Fetcher (Chrome TLS)."""
-    from scrapling.fetchers import Fetcher
-
-    try:
-        page = Fetcher.get(url, stealthy_headers=True, follow_redirects=True, timeout=20)
-    except Exception as exc:
-        log.warning("fetch failed for %s: %s", url, exc)
-        return None
-    body = page.body if isinstance(page.body, bytes) else str(page).encode("utf-8")
-    return Response(url=str(page.url), status_code=int(page.status), content=body)
-
-
-def _scrapling_stealth_fetch(url: str) -> Response | None:
-    """Slow-path fetch via Scrapling's StealthyFetcher (Patchright headless browser)."""
-    from scrapling.fetchers import StealthyFetcher
-
-    try:
-        page = StealthyFetcher.fetch(
-            url,
-            headless=True,
-            disable_resources=True,
-            network_idle=True,
-            timeout=45000,
-        )
-    except Exception as exc:
-        log.warning("stealth fetch failed for %s: %s", url, exc)
-        return None
-    body = page.body if isinstance(page.body, bytes) else str(page).encode("utf-8")
-    return Response(url=str(page.url), status_code=int(page.status), content=body)
-
-
-def _scrapling_robots_fetch(host: str) -> str | None:
-    """Pull /robots.txt for a host using the fast-path fetcher."""
-    resp = _scrapling_fetch(f"https://{host}/robots.txt")
-    if resp is None or resp.status_code != 200:
-        return None
-    return resp.text
-
-
 class Client:
     """Polite client: rate-limited, robots-aware, with optional stealth escalation."""
 
@@ -123,24 +91,116 @@ class Client:
         user_agent: str = USER_AGENT,
     ) -> None:
         self._rate = rate_limiter or RateLimiter()
-        self._fetch_fn = fetch_fn or _scrapling_fetch
-        self._stealth_fetch_fn = stealth_fetch_fn or _scrapling_stealth_fetch
-        self._fetch_robots = fetch_robots or _scrapling_robots_fetch
         self._user_agent = user_agent
         self._robots_cache: dict[str, str | None] = {}
+        # Test injection points; if not provided, lazy-init Scrapling sessions.
+        self._fetch_fn_override = fetch_fn
+        self._stealth_fetch_fn_override = stealth_fetch_fn
+        self._fetch_robots_override = fetch_robots
+        # Each tuple is (entered_handle, context_manager) so we can call __exit__
+        # on the original CM while using the entered handle for requests.
+        self._fetcher_session: tuple[Any, Any] | None = None
+        self._stealth_session: tuple[Any, Any] | None = None
 
+    # ---- context manager so sessions get closed cleanly ----
+    def __enter__(self) -> Client:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.close()
+
+    def close(self) -> None:
+        if self._fetcher_session is not None:
+            _, cm = self._fetcher_session
+            try:
+                cm.__exit__(None, None, None)
+            except Exception as e:
+                log.warning("error closing fetcher session: %s", e)
+            self._fetcher_session = None
+        if self._stealth_session is not None:
+            _, cm = self._stealth_session
+            try:
+                cm.__exit__(None, None, None)
+            except Exception as e:
+                log.warning("error closing stealth session: %s", e)
+            self._stealth_session = None
+
+    # ---- public API ----
     def get(self, url: str, *, stealth: bool = False) -> Response | None:
         host = urllib.parse.urlparse(url).netloc
         if not self._is_allowed(url, host):
             return None
         self._rate.wait_for(host)
-        fetch = self._stealth_fetch_fn if stealth else self._fetch_fn
-        return fetch(url)
+        return self._stealth_fetch(url) if stealth else self._fetch(url)
+
+    # ---- internals ----
+    def _fetch(self, url: str) -> Response | None:
+        if self._fetch_fn_override is not None:
+            return self._fetch_fn_override(url)
+        try:
+            page = self._fetcher().get(url, stealthy_headers=True, timeout=20)
+        except Exception as exc:
+            log.warning("fetch failed for %s: %s", url, exc)
+            return None
+        return _to_response(page)
+
+    def _stealth_fetch(self, url: str) -> Response | None:
+        if self._stealth_fetch_fn_override is not None:
+            return self._stealth_fetch_fn_override(url)
+        try:
+            page = self._stealth().fetch(url)
+        except Exception as exc:
+            log.warning("stealth fetch failed for %s: %s", url, exc)
+            return None
+        return _to_response(page)
+
+    def _fetcher(self) -> Any:
+        if self._fetcher_session is None:
+            from scrapling.fetchers import FetcherSession
+
+            cm = FetcherSession(
+                impersonate="chrome", stealthy_headers=True, timeout=20, retries=2
+            )
+            handle = cm.__enter__()
+            self._fetcher_session = (handle, cm)
+        return self._fetcher_session[0]
+
+    def _stealth(self) -> Any:
+        if self._stealth_session is None:
+            from scrapling.fetchers import StealthySession
+
+            cm = StealthySession(
+                headless=True,
+                disable_resources=True,
+                network_idle=True,
+                timeout=45000,
+            )
+            handle = cm.__enter__()  # type: ignore[no-untyped-call]
+            self._stealth_session = (handle, cm)
+        return self._stealth_session[0]
 
     def _is_allowed(self, url: str, host: str) -> bool:
         if host not in self._robots_cache:
             try:
-                self._robots_cache[host] = self._fetch_robots(host)
+                self._robots_cache[host] = self._robots_for(host)
             except Exception:
                 self._robots_cache[host] = None
         return is_allowed(url, self._robots_cache[host], user_agent=self._user_agent)
+
+    def _robots_for(self, host: str) -> str | None:
+        if self._fetch_robots_override is not None:
+            return self._fetch_robots_override(host)
+        resp = self._fetch(f"https://{host}/robots.txt")
+        if resp is None or resp.status_code != 200:
+            return None
+        return resp.text
+
+
+def _to_response(page: Any) -> Response:
+    body = page.body if isinstance(page.body, bytes) else str(page).encode("utf-8")
+    return Response(url=str(page.url), status_code=int(page.status), content=body)

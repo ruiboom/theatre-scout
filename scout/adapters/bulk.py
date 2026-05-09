@@ -20,7 +20,6 @@ from scout.adapters.registry import register
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
     "yard",
-    "upstairs-at-the-gatehouse",
     "waterloo-east",
 }
 
@@ -89,11 +88,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("tower", "https://www.towertheatre.org.uk/whats-on/", 'a[href*="/event/"]'),
-    (
-        "upstairs-at-the-gatehouse",
-        "https://upstairsatthegatehouse.com/whats-on/",
-        'a[href*="/show"]',
-    ),
     ("waterloo-east", "https://www.waterlooeast.co.uk/", 'a[href*="/show"]'),
     ("white-bear", "https://www.whitebeartheatre.co.uk/", 'a[href*="/show/"]'),
     # --- outer ---

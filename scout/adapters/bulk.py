@@ -20,7 +20,6 @@ from scout.adapters.registry import register
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
     "yard",
-    "waterloo-east",
 }
 
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
@@ -88,7 +87,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("tower", "https://www.towertheatre.org.uk/whats-on/", 'a[href*="/event/"]'),
-    ("waterloo-east", "https://www.waterlooeast.co.uk/", 'a[href*="/show"]'),
     ("white-bear", "https://www.whitebeartheatre.co.uk/", 'a[href*="/show/"]'),
     # --- outer ---
     ("alexandra-palace", "https://www.alexandrapalace.com/whats-on/", 'a[href*="/whats-on/"]'),

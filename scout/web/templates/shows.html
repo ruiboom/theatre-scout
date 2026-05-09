@@ -22,6 +22,15 @@
         {% endfor %}
     </select>
     {% if filter_when %}<input type="hidden" name="when" value="{{ filter_when }}">{% endif %}
+    <select name="sort" aria-label="Sort by">
+        {% for value, label in [("start_date","Start date"), ("end_date","End date"), ("title","Title"), ("venue","Venue")] %}
+            <option value="{{ value }}" {% if sort_field == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select name="dir" aria-label="Direction">
+        <option value="asc" {% if sort_dir == "asc" %}selected{% endif %}>↑ Ascending</option>
+        <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>↓ Descending</option>
+    </select>
     <button type="submit">Filter</button>
 </form>
 <h2>Upcoming shows ({{ shows | length }})</h2>

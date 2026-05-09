@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import sqlite3
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from datetime import date as Date
 from pathlib import Path
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -14,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from scout import db
+from scout.models import Show, Theatre
 from scout.theatres import load as load_theatres
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -121,6 +123,34 @@ def theatre_page(
     )
 
 
+SORT_FIELDS = {"start_date", "end_date", "title", "venue"}
+
+
+def _sort_shows(
+    shows: Sequence[Show],
+    theatres: Mapping[str, Theatre],
+    field: str,
+    descending: bool,
+) -> list[Show]:
+    from datetime import date
+
+    far_future = date(9999, 1, 1)
+    far_past = date(1, 1, 1)
+    sentinel = far_past if descending else far_future
+
+    def key(s: Show) -> Any:
+        if field == "title":
+            return s.title.lower()
+        if field == "venue":
+            t = theatres.get(s.theatre_slug)
+            return t.name.lower() if t else ""
+        if field == "end_date":
+            return s.end_date or sentinel
+        return s.start_date or sentinel
+
+    return sorted(shows, key=key, reverse=descending)
+
+
 @app.get("/shows")
 def shows_page(
     request: Request,
@@ -131,6 +161,8 @@ def shows_page(
     type: str | None = None,
     cat: str | None = None,
     when: str | None = None,
+    sort: str | None = None,
+    dir: str | None = None,
 ) -> object:
     cutoff = Date.fromisoformat(today) if today else Date.today()
     if when == "new":
@@ -167,6 +199,10 @@ def shows_page(
             if s.theatre_slug in theatres and theatres[s.theatre_slug].category == cat
         ]
 
+    sort_field = sort if sort in SORT_FIELDS else "start_date"
+    descending = dir == "desc"
+    shows = _sort_shows(shows, theatres, sort_field, descending)
+
     def _pill_url(when_value: str) -> str:
         parts: list[str] = []
         if q:
@@ -177,6 +213,10 @@ def shows_page(
             parts.append(f"cat={cat}")
         if when_value:
             parts.append(f"when={when_value}")
+        if sort:
+            parts.append(f"sort={sort}")
+        if dir:
+            parts.append(f"dir={dir}")
         return "/shows" + ("?" + "&".join(parts) if parts else "")
 
     return templates.TemplateResponse(
@@ -190,6 +230,8 @@ def shows_page(
             "filter_type": type or "",
             "filter_cat": cat or "",
             "filter_when": when or "",
+            "sort_field": sort_field,
+            "sort_dir": "desc" if descending else "asc",
             "pill_urls": {
                 "": _pill_url(""),
                 "today": _pill_url("today"),

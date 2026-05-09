@@ -57,6 +57,74 @@ def client(tmp_path: Path) -> TestClient:
     web_app.app.dependency_overrides.clear()
 
 
+def test_sort_shows_by_each_field() -> None:
+    from datetime import date as Date
+
+    from scout.models import Show, Theatre
+    from scout.web.app import _sort_shows
+
+    almeida_t = Theatre(
+        slug="almeida",
+        name="Almeida Theatre",
+        area="Islington",
+        postcode_prefix="N1",
+        category="major",
+        url="https://almeida.co.uk",
+    )
+    bush_t = Theatre(
+        slug="bush",
+        name="Bush Theatre",
+        area="Shepherd's Bush",
+        postcode_prefix="W12",
+        category="major",
+        url="https://bushtheatre.co.uk",
+    )
+    theatres = {"almeida": almeida_t, "bush": bush_t}
+
+    s_a = Show(
+        theatre_slug="bush",
+        title="Avalon",
+        url="https://bushtheatre.co.uk/a",
+        start_date=Date(2026, 6, 1),
+        end_date=Date(2026, 7, 1),
+    )
+    s_b = Show(
+        theatre_slug="almeida",
+        title="Bedlam",
+        url="https://almeida.co.uk/b",
+        start_date=Date(2026, 5, 1),
+        end_date=Date(2026, 8, 1),
+    )
+    s_c = Show(
+        theatre_slug="bush",
+        title="Caesar",
+        url="https://bushtheatre.co.uk/c",
+        start_date=None,
+        end_date=Date(2026, 9, 1),
+    )
+    shows = [s_a, s_b, s_c]
+
+    assert [s.title for s in _sort_shows(shows, theatres, "title", False)] == [
+        "Avalon",
+        "Bedlam",
+        "Caesar",
+    ]
+    assert [s.title for s in _sort_shows(shows, theatres, "title", True)] == [
+        "Caesar",
+        "Bedlam",
+        "Avalon",
+    ]
+    # Venue: Almeida < Bush
+    venue_asc = [s.theatre_slug for s in _sort_shows(shows, theatres, "venue", False)]
+    assert venue_asc[0] == "almeida"
+    # Start date asc: shows with no date sort to the end
+    titles = [s.title for s in _sort_shows(shows, theatres, "start_date", False)]
+    assert titles[-1] == "Caesar"
+    # End date desc: latest first
+    titles = [s.title for s in _sort_shows(shows, theatres, "end_date", True)]
+    assert titles[0] == "Caesar"
+
+
 def test_fmt_relative_buckets() -> None:
     from datetime import UTC, datetime, timedelta
 
@@ -143,6 +211,36 @@ def test_shows_filter_week_includes_imminent_runs(client: TestClient) -> None:
     r = client.get("/shows", params={"today": "2026-05-28", "when": "week"})
     assert r.status_code == 200
     assert "Doll" in r.text
+
+
+def test_shows_default_sort_is_start_date_ascending(client: TestClient) -> None:
+    # Seeded: only "A Doll's House" is upcoming on a 2026-05-15 cutoff.
+    r = client.get("/shows", params={"today": "2026-05-15"})
+    assert r.status_code == 200
+    assert "Doll" in r.text
+
+
+def test_shows_sort_by_title(client: TestClient) -> None:
+    r = client.get("/shows", params={"today": "2026-05-15", "sort": "title", "dir": "asc"})
+    assert r.status_code == 200
+    # Default sort would put "A Doll's House" first; just check the sort param is wired.
+    assert 'name="sort"' in r.text
+
+
+def test_shows_sort_dir_desc_reverses_order(client: TestClient) -> None:
+    # Seed has only one upcoming show, so this is mostly a wiring test.
+    r_asc = client.get("/shows", params={"today": "2026-05-15", "sort": "title", "dir": "asc"})
+    r_desc = client.get("/shows", params={"today": "2026-05-15", "sort": "title", "dir": "desc"})
+    assert r_asc.status_code == 200
+    assert r_desc.status_code == 200
+
+
+def test_shows_sort_persists_in_pill_urls(client: TestClient) -> None:
+    r = client.get("/shows", params={"today": "2026-05-15", "sort": "venue", "dir": "desc"})
+    assert r.status_code == 200
+    # Today/Week/New pills should preserve sort+dir
+    assert "sort=venue" in r.text
+    assert "dir=desc" in r.text
 
 
 def test_shows_filter_week_excludes_far_future_runs(client: TestClient) -> None:

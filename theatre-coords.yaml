@@ -1,0 +1,204 @@
+alexandra-palace:
+  lat: 51.5945562
+  lon: -0.1312121
+almeida:
+  lat: 51.5394403
+  lon: -0.1030764
+arcola:
+  lat: 51.5469457
+  lon: -0.074908
+barbican:
+  lat: 51.5206514
+  lon: -0.0938065
+bloomsbury:
+  lat: 51.525044
+  lon: -0.1328141
+bridge-theatre:
+  lat: 51.5040964
+  lon: -0.0773186
+brixton-house:
+  lat: 51.4620286
+  lon: -0.1109459
+bush:
+  lat: 51.505135
+  lon: -0.2260161
+camden-peoples:
+  lat: 51.5263814
+  lon: -0.1384024
+charing-cross:
+  lat: 51.5076633
+  lon: -0.1243661
+churchill:
+  lat: 51.4035538
+  lon: 0.0143007
+cockpit:
+  lat: 51.5244523
+  lon: -0.1696447
+coronet:
+  lat: 51.5085433
+  lon: -0.198132
+donmar-warehouse:
+  lat: 51.5139417
+  lon: -0.1257733
+drayton-arms:
+  lat: 51.4906144
+  lon: -0.1833764
+etcetera:
+  lat: 51.5405479
+  lon: -0.1443341
+eventim-apollo:
+  lat: 51.4907466
+  lon: -0.2244517
+finborough:
+  lat: 51.4865378
+  lon: -0.1900602
+gate:
+  lat: 51.5094888
+  lon: -0.1975125
+greenwich:
+  lat: 51.4794516
+  lon: -0.0076367
+hackney-empire:
+  lat: 51.5456229
+  lon: -0.0557025
+hampstead:
+  lat: 51.5438061
+  lon: -0.1736984
+hen-and-chickens:
+  lat: 51.5460243
+  lon: -0.1019468
+jermyn-street:
+  lat: 51.5091877
+  lon: -0.1349199
+kiln:
+  lat: 51.5431686
+  lon: -0.2003532
+kings-head:
+  lat: 51.5383124
+  lon: -0.1030055
+lyric-hammersmith:
+  lat: 51.4930496
+  lon: -0.2265443
+marylebone:
+  lat: 51.5249005
+  lon: -0.1605033
+menier-chocolate-factory:
+  lat: 51.5046293
+  lon: -0.0943545
+national-theatre:
+  lat: 51.5070387
+  lon: -0.1145302
+new-diorama:
+  lat: 51.5249861
+  lon: -0.1419658
+new-wimbledon:
+  lat: 51.4192211
+  lon: -0.2014217
+old-red-lion:
+  lat: 51.5314266
+  lon: -0.1059203
+old-vic:
+  lat: 51.5020248
+  lon: -0.1092736
+omnibus:
+  lat: 51.4637067
+  lon: -0.1423891
+open-air-theatre:
+  lat: 51.5284616
+  lon: -0.1547704
+orange-tree:
+  lat: 51.4644128
+  lon: -0.3012886
+other-palace:
+  lat: 51.4987814
+  lon: -0.1423506
+park-theatre:
+  lat: 51.5657257
+  lon: -0.1084766
+pleasance:
+  lat: 51.5487341
+  lon: -0.1213887
+polka:
+  lat: 51.4197353
+  lon: -0.1949264
+queens-hornchurch:
+  lat: 51.5652318
+  lon: 0.219448
+richmond:
+  lat: 51.4620194
+  lon: -0.3037274
+riverside-studios:
+  lat: 51.488785
+  lon: -0.2283572
+rose-kingston:
+  lat: 51.4086055
+  lon: -0.3075277
+roundhouse:
+  lat: 51.5432505
+  lon: -0.1519761
+royal-court:
+  lat: 51.4925734
+  lon: -0.1564242
+sadlers-wells:
+  lat: 51.5294595
+  lon: -0.1061453
+seven-dials-playhouse:
+  lat: 51.5131718
+  lon: -0.1276517
+shakespeares-globe:
+  lat: 51.5081214
+  lon: -0.0971864
+soho-theatre:
+  lat: 51.5144119
+  lon: -0.1327928
+southwark-playhouse:
+  lat: 51.4924234
+  lon: -0.1027851
+tabard:
+  lat: 51.4956267
+  lon: -0.2548747
+tara:
+  lat: 51.4422042
+  lon: -0.188394
+theatre-royal-stratford-east:
+  lat: 51.5425633
+  lon: 0.000963
+tower:
+  lat: 51.5627976
+  lon: -0.0719883
+troubadour-canary-wharf:
+  lat: 51.5047674
+  lon: -0.0173118
+troubadour-wembley-park:
+  lat: 51.5610755
+  lon: -0.2825922
+underbelly-boulevard:
+  lat: 51.512412
+  lon: -0.1339135
+unicorn:
+  lat: 51.5039403
+  lon: -0.0807143
+union:
+  lat: 51.5033895
+  lon: -0.1018429
+upstairs-at-the-gatehouse:
+  lat: 51.5713837
+  lon: -0.1499456
+vaults:
+  lat: 51.5010275
+  lon: -0.1142036
+waterloo-east:
+  lat: 51.504072
+  lon: -0.110137
+white-bear:
+  lat: 51.4867905
+  lon: -0.1078631
+wiltons:
+  lat: 51.5106361
+  lon: -0.0668893
+yard:
+  lat: 51.5426387
+  lon: -0.0233113
+young-vic:
+  lat: 51.5032838
+  lon: -0.1073226

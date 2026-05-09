@@ -250,17 +250,55 @@ def test_shows_filter_week_excludes_far_future_runs(client: TestClient) -> None:
     assert "Doll" not in r.text
 
 
-def test_refresh_redirects_and_calls_scraper(
+def test_refresh_kicks_off_background_scrape(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    called: dict[str, bool] = {}
+    """The endpoint redirects immediately and the scrape runs in a background thread."""
+    import time
 
-    def fake_run_all(client_, conn, **kw):  # type: ignore[no-untyped-def]
-        called["yes"] = True
-        return []
+    called: list[tuple] = []  # type: ignore[type-arg]
 
-    monkeypatch.setattr("scout.scraper.run_all", fake_run_all)
+    def fake_run(db_path, theatres_path):  # type: ignore[no-untyped-def]
+        called.append((db_path, theatres_path))
+
+    monkeypatch.setattr(web_app, "_run_full_scrape", fake_run)
+
     r = client.post("/refresh", follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/"
-    assert called.get("yes") is True
+
+    # The thread should fire within a sec.
+    deadline = time.monotonic() + 1.0
+    while time.monotonic() < deadline and not called:
+        time.sleep(0.01)
+    assert len(called) == 1
+
+
+def test_refresh_dedups_when_scrape_already_running(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A second click while a scrape is in flight should NOT spawn another."""
+    spawned: list[None] = []
+
+    def fake_run(db_path, theatres_path):  # type: ignore[no-untyped-def]
+        spawned.append(None)
+
+    monkeypatch.setattr(web_app, "_run_full_scrape", fake_run)
+    monkeypatch.setattr(web_app, "_scrape_running", True)
+
+    r = client.post("/refresh", follow_redirects=False)
+    assert r.status_code == 303
+    # No new background scrape should have started.
+    import time
+
+    time.sleep(0.05)
+    assert spawned == []
+
+
+def test_home_shows_scraping_indicator_when_running(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(web_app, "_scrape_running", True)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "Scraping" in r.text or "in progress" in r.text

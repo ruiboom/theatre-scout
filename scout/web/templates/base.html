@@ -13,9 +13,11 @@
         <a href="/">Theatres</a>
         <a href="/shows">Upcoming shows</a>
         <form action="/refresh" method="post" class="inline refresh-form">
-            <button type="submit">Refresh</button>
+            <button type="submit" {% if scrape_running %}disabled{% endif %}>
+                {% if scrape_running %}Scraping…{% else %}Refresh{% endif %}
+            </button>
             <span class="last-refresh" title="{% if last_refresh %}{{ last_refresh.strftime('%a %d %b %Y, %H:%M %Z') }}{% endif %}">
-                Last: {{ last_refresh | fmt_relative }}
+                {% if scrape_running %}in progress…{% else %}Last: {{ last_refresh | fmt_relative }}{% endif %}
             </span>
         </form>
     </nav>

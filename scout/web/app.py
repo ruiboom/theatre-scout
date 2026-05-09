@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import threading
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
@@ -76,9 +77,28 @@ def get_conn(db_path: Path = Depends(get_db_path)) -> Iterator[sqlite3.Connectio
         conn.close()
 
 
+# Background-scrape state. Module-level so concurrent /refresh clicks deduplicate
+# without spinning up a second scrape on top of one already running.
+_scrape_lock = threading.Lock()
+_scrape_running = False
+# Tunable defaults for the Refresh button. The web flow does the full,
+# enriched, replace-stale, parallel scrape — same as `scout scrape --enrich
+# --replace --workers 16` from the CLI.
+REFRESH_ENRICH = True
+REFRESH_REPLACE = True
+REFRESH_WORKERS = 16
+
+
+def is_scrape_running() -> bool:
+    return _scrape_running
+
+
 def _layout_ctx(conn: sqlite3.Connection) -> dict[str, object]:
     """Context vars expected by base.html. Merged into every template response."""
-    return {"last_refresh": db.last_scrape_at(conn)}
+    return {
+        "last_refresh": db.last_scrape_at(conn),
+        "scrape_running": is_scrape_running(),
+    }
 
 
 @app.get("/")
@@ -244,12 +264,57 @@ def shows_page(
 
 @app.post("/refresh")
 def refresh(
-    conn: sqlite3.Connection = Depends(get_conn),
+    db_path: Path = Depends(get_db_path),
+    theatres_path: Path = Depends(get_theatres_path),
 ) -> RedirectResponse:
-    from scout import adapters, scraper
-    from scout.http import Client
+    """Kick off a full scrape in a background thread; the request returns immediately.
 
-    adapters.load_all()
-    with Client() as client:
-        scraper.run_all(client, conn)
+    Concurrent clicks dedupe via `_scrape_running` — a second click while one is
+    already in flight is silently ignored. Status is surfaced via `is_scrape_running()`
+    in the layout context so the header can show "Scraping..." until it finishes.
+    """
+    global _scrape_running
+    with _scrape_lock:
+        if _scrape_running:
+            return RedirectResponse("/", status_code=303)
+        _scrape_running = True
+    try:
+        threading.Thread(
+            target=_run_full_scrape, args=(db_path, theatres_path), daemon=True
+        ).start()
+    except Exception:
+        _scrape_running = False
+        raise
     return RedirectResponse("/", status_code=303)
+
+
+def _run_full_scrape(db_path: Path, theatres_path: Path) -> None:
+    """Worker body for the background refresh. Resets `_scrape_running` on exit
+    so the UI's 'Scraping…' indicator clears even if the run fails."""
+    global _scrape_running
+    try:
+        from scout import adapters, scraper
+        from scout.http import Client
+
+        adapters.load_all()
+        conn = db.connect(db_path)
+        try:
+            db.init_schema(conn)
+            db.upsert_theatres(conn, load_theatres(theatres_path))
+            with Client() as client:
+                scraper.run_all(
+                    client,
+                    conn,
+                    enrich=REFRESH_ENRICH,
+                    replace=REFRESH_REPLACE,
+                    workers=REFRESH_WORKERS,
+                )
+        finally:
+            conn.close()
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("background scrape failed")
+        raise
+    finally:
+        _scrape_running = False

@@ -14,14 +14,15 @@ from scout.adapters._generic import GenericAdapter
 from scout.adapters.registry import register
 
 # Venues that need a real browser to render content (or to defeat anti-bot blocking).
+# `hen-and-chickens` and `tabard` were initially added here but the stealth
+# browser still couldn't reach them (DNS / cert issues, repeated timeouts).
+# Keeping them in `_JS_VENUES` cost ~3 min per scrape on retries — drop instead.
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
     "yard",
     "vaults",
     "upstairs-at-the-gatehouse",
     "waterloo-east",
-    "hen-and-chickens",
-    "tabard",
 }
 
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.

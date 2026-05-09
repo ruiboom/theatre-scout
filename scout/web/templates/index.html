@@ -1,19 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Theatres · Theatre Scout{% endblock %}
 {% block content %}
-<h2>Theatres ({{ total_shows }} upcoming shows)</h2>
-{% for cat, label in [("major", "Major producing houses"), ("mid", "Mid-sized & specialist"), ("fringe", "Fringe & pub"), ("outer", "Outer London")] %}
-    <section class="category">
-        <h3>{{ label }} <small>({{ by_cat[cat] | length }})</small></h3>
-        <ul class="theatres">
-            {% for t in by_cat[cat] %}
-                <li>
-                    <a href="/theatres/{{ t.slug }}">{{ t.name }}</a>
-                    <span class="meta">{{ t.area }}, {{ t.postcode_prefix }}</span>
-                    <span class="count">{{ show_counts.get(t.slug, 0) }} shows</span>
-                </li>
+
+{% set categories = [
+    ("major", "Major producing houses"),
+    ("mid",   "Mid-sized & specialist"),
+    ("fringe","Fringe & pub theatres"),
+    ("outer", "Outer London receiving houses"),
+] %}
+
+<section class="hero">
+    <div class="hero-l">
+        <div class="ts-meta">London · An index of every show currently in town</div>
+        <h1 class="hero-h1">An index of<br>every show<br>in London.</h1>
+        <p class="hero-p">Theatre Scout doesn't sell tickets. We list everything playing across {{ total_venues }} venues outside the West End — from the National to a back room in Bethnal Green — and link you to the box office.</p>
+        <div class="hero-cta">
+            <a class="ts-btn ts-btn--primary" href="/shows">Browse the index ›</a>
+        </div>
+    </div>
+    <div class="hero-r">
+        <div>
+            <div class="bignum-k">Upcoming</div>
+            <div class="bignum-n">{{ '{:,}'.format(total_shows) }}</div>
+            <div class="bignum-s">listings</div>
+        </div>
+        <div>
+            <div class="bignum-k">Indexed</div>
+            <div class="bignum-n">{{ total_venues }}</div>
+            <div class="bignum-s">venues</div>
+        </div>
+        <div>
+            <div class="bignum-k">Major + mid</div>
+            <div class="bignum-n">{{ by_cat['major'] | length + by_cat['mid'] | length }}</div>
+            <div class="bignum-s">producing houses</div>
+        </div>
+        <div>
+            <div class="bignum-k">Fringe + outer</div>
+            <div class="bignum-n">{{ by_cat['fringe'] | length + by_cat['outer'] | length }}</div>
+            <div class="bignum-s">receiving / pub</div>
+        </div>
+    </div>
+</section>
+
+{% for cat, label in categories %}
+    {% set theatres = by_cat[cat] %}
+    <section class="rail">
+        <div class="rail-head">
+            <div class="rail-idx">{{ '%02d' % (loop.index) }}</div>
+            <h2 class="rail-title">{{ label }} <small>{{ theatres | length }} venues</small></h2>
+            <a class="rail-count" href="/shows?cat={{ cat }}">View shows ›</a>
+        </div>
+        <ul class="row-list">
+            {% for t in theatres %}
+                <a class="row row-theatre" href="/theatres/{{ t.slug }}">
+                    <div class="row-idx">{{ '%03d' % loop.index }}</div>
+                    <div class="row-body">
+                        <div class="row-title">{{ t.name }}</div>
+                        <div class="row-tag">{{ cat }}</div>
+                    </div>
+                    <div class="row-meta">{{ t.area }} · {{ t.postcode_prefix }}</div>
+                    <div class="row-aside">{{ show_counts.get(t.slug, 0) }} shows</div>
+                </a>
             {% endfor %}
         </ul>
     </section>
 {% endfor %}
+
 {% endblock %}

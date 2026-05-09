@@ -4,27 +4,43 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Theatre Scout{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/logo-mark.svg">
+    <link rel="stylesheet" href="/static/theatre-scout.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header>
-    <h1><a href="/">Theatre Scout</a></h1>
-    <nav>
+<header class="bar">
+    <div class="bar-l">
+        <a class="bar-tile" href="/" aria-label="Theatre Scout home">TS</a>
+        <strong>TS</strong>
+        <span class="bar-sep">/</span>
+        <a href="/">Theatre Scout</a>
+        <span class="bar-sep">/</span>
+        <span>London</span>
+    </div>
+    <nav class="bar-r">
         <a href="/">Theatres</a>
-        <a href="/shows">Upcoming shows</a>
-        <form action="/refresh" method="post" class="inline refresh-form">
-            <button type="submit" {% if scrape_running %}disabled{% endif %}>
-                {% if scrape_running %}Scraping…{% else %}Refresh{% endif %}
-            </button>
-            <span class="last-refresh" title="{% if last_refresh %}{{ last_refresh.strftime('%a %d %b %Y, %H:%M %Z') }}{% endif %}">
-                {% if scrape_running %}in progress…{% else %}Last: {{ last_refresh | fmt_relative }}{% endif %}
-            </span>
-        </form>
+        <span class="bar-sep">·</span>
+        <a href="/shows">Shows</a>
+        <span class="bar-sep bar-stat-extra">·</span>
+        <span class="bar-actions">
+            <form action="/refresh" method="post">
+                <button type="submit" class="ts-btn"{% if scrape_running %} disabled{% endif %}>
+                    {% if scrape_running %}Scraping…{% else %}Refresh{% endif %}
+                </button>
+                <span class="bar-stamp" title="{% if last_refresh %}{{ last_refresh.strftime('%a %d %b %Y, %H:%M %Z') }}{% endif %}">
+                    {% if scrape_running %}in progress…{% else %}Last · {{ last_refresh | fmt_relative }}{% endif %}
+                </span>
+            </form>
+        </span>
     </nav>
 </header>
-<main>
+<main class="page">
 {% block content %}{% endblock %}
 </main>
-<footer><small>Local theatre directory · scrapes {{ '{} venues'.format(68) }}</small></footer>
+<footer class="foot">
+    <div>© Theatre Scout · London only · Daily index</div>
+    <div>Local directory · 68 venues</div>
+</footer>
 </body>
 </html>

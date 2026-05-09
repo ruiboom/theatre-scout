@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from datetime import date as Date
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -121,6 +122,7 @@ def home(
             "by_cat": by_cat,
             "show_counts": show_counts,
             "total_shows": len(upcoming),
+            "total_venues": len(theatres),
         },
     )
 
@@ -144,6 +146,9 @@ def theatre_page(
 
 
 SORT_FIELDS = {"start_date", "end_date", "title", "venue"}
+VIEW_MODES = {"rails", "list"}
+RAIL_CATEGORIES: tuple[str, ...] = ("major", "mid", "fringe", "outer")
+RAIL_PICK_LIMIT = 4
 
 
 def _sort_shows(
@@ -183,6 +188,7 @@ def shows_page(
     when: str | None = None,
     sort: str | None = None,
     dir: str | None = None,
+    view: str | None = None,
 ) -> object:
     cutoff = Date.fromisoformat(today) if today else Date.today()
     if when == "new":
@@ -223,21 +229,44 @@ def shows_page(
     descending = dir == "desc"
     shows = _sort_shows(shows, theatres, sort_field, descending)
 
-    def _pill_url(when_value: str) -> str:
-        parts: list[str] = []
-        if q:
-            parts.append(f"q={q}")
-        if type:
-            parts.append(f"type={type}")
-        if cat:
-            parts.append(f"cat={cat}")
-        if when_value:
-            parts.append(f"when={when_value}")
-        if sort:
-            parts.append(f"sort={sort}")
-        if dir:
-            parts.append(f"dir={dir}")
-        return "/shows" + ("?" + "&".join(parts) if parts else "")
+    view_mode = view if view in VIEW_MODES else "rails"
+
+    rails: dict[str, dict[str, object]] = {}
+    for c in RAIL_CATEGORIES:
+        cat_shows = [
+            s
+            for s in shows
+            if s.theatre_slug in theatres and theatres[s.theatre_slug].category == c
+        ]
+        rails[c] = {"total": len(cat_shows), "picks": cat_shows[:RAIL_PICK_LIMIT]}
+
+    current_params: dict[str, str] = {
+        "q": q or "",
+        "type": type or "",
+        "cat": cat or "",
+        "when": when or "",
+        "view": view_mode,
+        "sort": sort_field if sort_field != "start_date" else "",
+        "dir": "desc" if descending else "",
+    }
+
+    def chip_url(**changes: str) -> str:
+        merged = {**current_params, **changes}
+        # Drop the default view so the URL is clean when nothing is selected.
+        if merged.get("view") == "rails":
+            merged["view"] = ""
+        cleaned = {k: v for k, v in merged.items() if v}
+        return "/shows" + (("?" + urlencode(cleaned)) if cleaned else "")
+
+    def sort_url(field: str) -> str:
+        if sort_field == field:
+            new_dir = "asc" if descending else "desc"
+        else:
+            new_dir = "asc"
+        return chip_url(sort=field, dir=new_dir if new_dir != "asc" else "")
+
+    # Hidden inputs for the search form: preserve everything except q.
+    carry_params = [(k, v) for k, v in current_params.items() if v and k != "q"]
 
     return templates.TemplateResponse(
         request,
@@ -252,12 +281,11 @@ def shows_page(
             "filter_when": when or "",
             "sort_field": sort_field,
             "sort_dir": "desc" if descending else "asc",
-            "pill_urls": {
-                "": _pill_url(""),
-                "today": _pill_url("today"),
-                "week": _pill_url("week"),
-                "new": _pill_url("new"),
-            },
+            "view": view_mode,
+            "rails": rails,
+            "chip_url": chip_url,
+            "sort_url": sort_url,
+            "carry_params": carry_params,
         },
     )
 

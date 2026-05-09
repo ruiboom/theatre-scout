@@ -1,28 +1,54 @@
 {% extends "base.html" %}
 {% block title %}{{ theatre.name }} · Theatre Scout{% endblock %}
 {% block content %}
-<p><a href="/">&larr; All theatres</a></p>
-<h2>{{ theatre.name }}</h2>
-<p class="meta">{{ theatre.area }} ({{ theatre.postcode_prefix }}) · <a href="{{ theatre.url }}" target="_blank" rel="noopener">{{ theatre.url }}</a></p>
+
+<div class="crumb">
+    <a href="/">← All theatres</a>
+    <span class="crumb-meta">/ {{ theatre.category }} / {{ theatre.area }}</span>
+</div>
+
+<section class="show-hero">
+    <div class="show-l">
+        <div class="ts-meta">{{ '%04d' % shows | length }} · {{ theatre.category }} venue</div>
+        <h1 class="show-title">{{ theatre.name }}</h1>
+        <div class="show-venue">{{ theatre.area }} · {{ theatre.postcode_prefix }}</div>
+        <div class="show-cta">
+            <a class="ts-btn ts-btn--primary" href="{{ theatre.url }}" target="_blank" rel="noopener">Box office ↗</a>
+            <a class="ts-btn" href="/shows?cat={{ theatre.category }}">Other {{ theatre.category }} venues</a>
+        </div>
+    </div>
+    <div class="show-r">
+        <div class="show-still"></div>
+    </div>
+</section>
 
 {% if shows %}
-    <ul class="shows">
+<section class="list" style="padding-top: 24px;">
+    <div class="list-head">
+        <div class="list-head-mono">Programme · {{ shows | length }} shows</div>
+    </div>
+    <div class="row-list">
         {% for s in shows %}
-            <li>
-                {% if s.image_url %}<a href="{{ s.url }}" target="_blank" rel="noopener" class="thumb"><img src="{{ s.image_url }}" alt="" loading="lazy"></a>{% endif %}
-                <div class="show-body">
-                    <div class="show-line">
-                        <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
-                        <span class="show-type">{{ s.show_type }}</span>
-                        <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
-                        {% if s.price_min %}<span class="price">{{ s.price_min | fmt_price }}{% if s.price_max %} – {{ s.price_max | fmt_price }}{% endif %}</span>{% endif %}
-                    </div>
-                    {% if s.description %}<p class="description">{{ s.description }}</p>{% endif %}
+            <a class="row" href="{{ s.url }}" target="_blank" rel="noopener">
+                <div class="row-idx">{{ '%03d' % loop.index }}</div>
+                <div class="thumb">
+                    {% if s.image_url %}<img src="{{ s.image_url }}" alt="" loading="lazy">{% endif %}
                 </div>
-            </li>
+                <div class="row-body">
+                    <div class="row-title">{{ s.title }}</div>
+                    <div class="row-tag">{{ s.show_type }}{% if s.price_min %} · {{ s.price_min | fmt_price }}{% if s.price_max %}–{{ s.price_max | fmt_price }}{% endif %}{% endif %}</div>
+                </div>
+                <div class="row-venue">{% if s.description %}{{ s.description | truncate(80, true, '…') }}{% endif %}</div>
+                <div class="row-dates">
+                    {% if s.start_date %}{{ s.start_date.strftime('%d %b') }}{% if s.end_date %} – {{ s.end_date.strftime('%d %b') }}{% endif %}{% endif %}
+                </div>
+                <div class="row-aside">↗</div>
+            </a>
         {% endfor %}
-    </ul>
+    </div>
+</section>
 {% else %}
-    <p><em>No shows scraped yet for this theatre. Hit Refresh to fetch.</em></p>
+    <p class="empty">No shows scraped yet for this theatre. Hit Refresh to fetch.</p>
 {% endif %}
+
 {% endblock %}

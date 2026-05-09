@@ -1,0 +1,142 @@
+/* Theatre Scout · Swiss Index — design tokens
+ * Type-driven, monospace metadata, strict grid, 1px hairlines.
+ * Imports webfonts from Google Fonts (no licensed assets in this kit).
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Color */
+  --ts-paper:    #fcfcfc;     /* page */
+  --ts-paper-2:  #f5f5f5;     /* hover / soft block */
+  --ts-ink:      #0c0c0c;     /* primary type, rules, marks */
+  --ts-ink-2:    #2a2a2a;     /* secondary emphasis */
+  --ts-mute:     #717171;     /* metadata, captions */
+  --ts-hair:     #e6e6e6;     /* dividers, faint outlines */
+  --ts-accent:   #0c0c0c;     /* swiss is mono — accent IS ink. Use sparingly with --ts-paper inverted */
+  --ts-warn:     #b34a1c;     /* "closing soon" / urgency. Used as text only, never bg. */
+  --ts-good:     #1e6f3b;     /* "now booking". Text only. */
+
+  /* Type */
+  --ts-font-sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ts-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale — display is freeform per surface; UI scale is fixed */
+  --ts-size-meta:   11px;     /* monospace tags, all-caps */
+  --ts-size-caption:12px;
+  --ts-size-body:   14px;
+  --ts-size-list:   16px;     /* list-row title */
+  --ts-size-h4:     20px;
+  --ts-size-h3:     28px;     /* rail / section headings */
+  --ts-size-h2:     56px;     /* statistic numerals, page heroes */
+  --ts-size-h1:     76px;     /* show titles */
+  --ts-size-display:96px;     /* very big number, page-once */
+
+  /* Letter-spacing — metadata is wide, display is tight */
+  --ts-track-meta:  0.04em;
+  --ts-track-tight: -0.02em;
+  --ts-track-display: -0.035em;
+
+  /* Layout */
+  --ts-pad-page:    32px;     /* desktop horizontal padding */
+  --ts-pad-page-sm: 16px;     /* mobile */
+  --ts-gap:         24px;
+  --ts-gap-sm:      8px;
+  --ts-rule:        1px solid var(--ts-ink);
+  --ts-hair-rule:   1px solid var(--ts-hair);
+
+  /* No radii. Swiss is rectilinear. Override only if absolutely necessary. */
+  --ts-radius:      0;
+
+  /* No shadows. Depth is conveyed with rules and inversion (ink-on-paper / paper-on-ink). */
+  --ts-shadow:      none;
+}
+
+/* Semantic helpers ─────────────────────────────────────────────── */
+
+.ts-meta {
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-meta);
+  letter-spacing: var(--ts-track-meta);
+  text-transform: uppercase;
+  color: var(--ts-mute);
+}
+
+.ts-h1 {
+  font-family: var(--ts-font-sans);
+  font-weight: 700;
+  font-size: var(--ts-size-h1);
+  line-height: 0.94;
+  letter-spacing: var(--ts-track-display);
+}
+
+.ts-h2 {
+  font-family: var(--ts-font-sans);
+  font-weight: 700;
+  font-size: var(--ts-size-h2);
+  line-height: 0.9;
+  letter-spacing: var(--ts-track-display);
+  font-feature-settings: "tnum";
+}
+
+.ts-h3 {
+  font-family: var(--ts-font-sans);
+  font-weight: 600;
+  font-size: var(--ts-size-h3);
+  line-height: 1.05;
+  letter-spacing: var(--ts-track-tight);
+}
+
+.ts-list-title {
+  font-family: var(--ts-font-sans);
+  font-weight: 500;
+  font-size: var(--ts-size-list);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.ts-body { font-family: var(--ts-font-sans); font-size: var(--ts-size-body); line-height: 1.55; }
+.ts-caption { font-family: var(--ts-font-sans); font-size: var(--ts-size-caption); color: var(--ts-mute); }
+
+/* Buttons — square, 1px stroke, ink-on-paper or inverted */
+.ts-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-meta);
+  letter-spacing: var(--ts-track-meta);
+  text-transform: uppercase;
+  border: 1px solid var(--ts-ink);
+  background: transparent;
+  color: var(--ts-ink);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.ts-btn:hover { background: var(--ts-ink); color: var(--ts-paper); }
+.ts-btn--primary { background: var(--ts-ink); color: var(--ts-paper); }
+.ts-btn--primary:hover { background: var(--ts-ink-2); }
+
+/* Chip / pill — used for tags, types, tabs */
+.ts-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--ts-hair);
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-meta);
+  letter-spacing: var(--ts-track-meta);
+  text-transform: uppercase;
+  color: var(--ts-ink);
+}
+.ts-chip--active { background: var(--ts-ink); color: var(--ts-paper); border-color: var(--ts-ink); }
+
+/* Hairline dividers */
+.ts-rule { border-top: var(--ts-rule); }
+.ts-hair { border-top: var(--ts-hair-rule); }
+
+/* Page chrome */
+html, body { background: var(--ts-paper); color: var(--ts-ink); margin: 0; }
+body { font-family: var(--ts-font-sans); }
+
+/* Default link style — underlined on hover, ink-coloured by default */
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }

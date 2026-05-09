@@ -1,57 +1,134 @@
 {% extends "base.html" %}
-{% block title %}Upcoming shows · Theatre Scout{% endblock %}
+{% block title %}Shows · Theatre Scout{% endblock %}
 {% block content %}
-<nav class="quick-filters">
-    <a href="{{ pill_urls[""] }}" class="pill {% if not filter_when %}active{% endif %}">All</a>
-    <a href="{{ pill_urls["today"] }}" class="pill {% if filter_when == 'today' %}active{% endif %}">Today</a>
-    <a href="{{ pill_urls["week"] }}" class="pill {% if filter_when == 'week' %}active{% endif %}">This week</a>
-    <a href="{{ pill_urls["new"] }}" class="pill {% if filter_when == 'new' %}active{% endif %}">New</a>
-</nav>
-<form method="get" action="/shows" class="filters">
-    <input type="search" name="q" value="{{ q }}" placeholder="Search title…">
-    <select name="type">
-        <option value="">All types</option>
-        {% for t in ["play", "musical", "comedy", "dance", "opera", "family", "cabaret", "other"] %}
-            <option value="{{ t }}" {% if filter_type == t %}selected{% endif %}>{{ t }}</option>
-        {% endfor %}
-    </select>
-    <select name="cat">
-        <option value="">All categories</option>
-        {% for c, label in [("major","Major"),("mid","Mid-sized"),("fringe","Fringe"),("outer","Outer")] %}
-            <option value="{{ c }}" {% if filter_cat == c %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-    </select>
-    {% if filter_when %}<input type="hidden" name="when" value="{{ filter_when }}">{% endif %}
-    <select name="sort" aria-label="Sort by">
-        {% for value, label in [("start_date","Start date"), ("end_date","End date"), ("title","Title"), ("venue","Venue")] %}
-            <option value="{{ value }}" {% if sort_field == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-    </select>
-    <select name="dir" aria-label="Direction">
-        <option value="asc" {% if sort_dir == "asc" %}selected{% endif %}>↑ Ascending</option>
-        <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>↓ Descending</option>
-    </select>
-    <button type="submit">Filter</button>
-</form>
-<h2>Upcoming shows ({{ shows | length }})</h2>
-{% if shows %}
-    <ul class="shows">
-        {% for s in shows %}
-            <li>
-                {% if s.image_url %}<a href="{{ s.url }}" target="_blank" rel="noopener" class="thumb"><img src="{{ s.image_url }}" alt="" loading="lazy"></a>{% endif %}
-                <div class="show-body">
-                    <div class="show-line">
-                        <a href="{{ s.url }}" target="_blank" rel="noopener"><strong>{{ s.title }}</strong></a>
-                        <span class="show-type">{{ s.show_type }}</span>
-                        <span class="venue"><a href="/theatres/{{ s.theatre_slug }}">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</a></span>
-                        <span class="dates">{{ s.start_date | fmt_date }}{% if s.end_date %} – {{ s.end_date | fmt_date }}{% endif %}</span>
-                    </div>
-                    {% if s.description %}<p class="description">{{ s.description }}</p>{% endif %}
-                </div>
-            </li>
-        {% endfor %}
-    </ul>
-{% else %}
-    <p><em>No upcoming shows. Run a scrape first.</em></p>
+
+{% macro index_row(idx, s) %}
+    <a class="row" href="{{ s.url }}" target="_blank" rel="noopener">
+        <div class="row-idx">{{ '%03d' % idx }}</div>
+        <div class="thumb">
+            {% if s.image_url %}<img src="{{ s.image_url }}" alt="" loading="lazy">{% endif %}
+        </div>
+        <div class="row-body">
+            <div class="row-title">{{ s.title }}</div>
+            <div class="row-tag">{{ s.show_type }}</div>
+        </div>
+        <div class="row-venue">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</div>
+        <div class="row-dates">
+            {% if s.start_date %}{{ s.start_date.strftime('%d %b') }}{% if s.end_date %} – {{ s.end_date.strftime('%d %b') }}{% endif %}{% endif %}
+        </div>
+        <div class="row-aside">↗</div>
+    </a>
+{% endmacro %}
+
+{% macro card(s) %}
+    <a class="card" href="{{ s.url }}" target="_blank" rel="noopener">
+        <div class="thumb">
+            {% if s.image_url %}<img src="{{ s.image_url }}" alt="" loading="lazy">{% endif %}
+        </div>
+        <div class="card-meta">{{ s.show_type }}</div>
+        <div class="card-title">{{ s.title }}</div>
+        <div class="card-sub">{{ theatres[s.theatre_slug].name if s.theatre_slug in theatres else s.theatre_slug }}</div>
+        <div class="card-dates">
+            {% if s.start_date %}{{ s.start_date.strftime('%d %b') }}{% if s.end_date %} – {{ s.end_date.strftime('%d %b') }}{% endif %}{% endif %}
+        </div>
+    </a>
+{% endmacro %}
+
+<section class="hero" style="padding: 48px 0 32px;">
+    <div class="hero-l">
+        <div class="ts-meta">Index · {{ '{:,}'.format(shows | length) }} listings</div>
+        <h1 class="hero-h1" style="font-size: clamp(48px, 5vw, 72px);">Shows playing<br>in London.</h1>
+    </div>
+</section>
+
+<section class="controls">
+    <div class="controls-l tabs">
+        <a class="ts-chip {% if not filter_when %}ts-chip--active{% endif %}" href="{{ chip_url(when='') }}">All</a>
+        <a class="ts-chip {% if filter_when == 'today' %}ts-chip--active{% endif %}" href="{{ chip_url(when='today') }}">Today</a>
+        <a class="ts-chip {% if filter_when == 'week' %}ts-chip--active{% endif %}" href="{{ chip_url(when='week') }}">This week</a>
+        <a class="ts-chip {% if filter_when == 'new' %}ts-chip--active{% endif %}" href="{{ chip_url(when='new') }}">New</a>
+    </div>
+    <div class="controls-r">
+        <form class="search" method="get" action="/shows">
+            {% for k, v in carry_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+            <input type="search" name="q" value="{{ q }}" placeholder="Search title…" aria-label="Search title">
+        </form>
+        <div class="tabs">
+            <a class="ts-chip {% if view == 'rails' %}ts-chip--active{% endif %}" href="{{ chip_url(view='rails') }}">Rails</a>
+            <a class="ts-chip {% if view == 'list' %}ts-chip--active{% endif %}" href="{{ chip_url(view='list') }}">List</a>
+        </div>
+    </div>
+</section>
+
+<details class="filters" {% if filter_type or filter_cat %}open{% endif %}>
+    <summary>Filters {% if filter_type or filter_cat %}· {{ (1 if filter_type else 0) + (1 if filter_cat else 0) }} active{% else %}· 0 active{% endif %}</summary>
+    <div class="filter-body">
+        <div class="filter-group">
+            <div class="filter-group-label">Type</div>
+            <div class="filter-row">
+                <a class="ts-chip {% if not filter_type %}ts-chip--active{% endif %}" href="{{ chip_url(type='') }}">All</a>
+                {% for t in ['play','musical','comedy','dance','opera','family','cabaret','other'] %}
+                    <a class="ts-chip {% if filter_type == t %}ts-chip--active{% endif %}" href="{{ chip_url(type=t) }}">{{ t }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="filter-group">
+            <div class="filter-group-label">Venue tier</div>
+            <div class="filter-row">
+                <a class="ts-chip {% if not filter_cat %}ts-chip--active{% endif %}" href="{{ chip_url(cat='') }}">All</a>
+                {% for c, label in [('major','Major'),('mid','Mid-sized'),('fringe','Fringe'),('outer','Outer')] %}
+                    <a class="ts-chip {% if filter_cat == c %}ts-chip--active{% endif %}" href="{{ chip_url(cat=c) }}">{{ label }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</details>
+
+{% if view == 'list' %}
+<div class="sort-bar">
+    <span class="sort-bar-label">Sort by</span>
+    {% for field, label in [('start_date','Opening'),('end_date','Closing'),('title','Title'),('venue','Venue')] %}
+        <a class="sort-link {% if sort_field == field %}active{% endif %}" href="{{ sort_url(field) }}">
+            {{ label }}
+            {% if sort_field == field %}<span class="sort-arrow">{% if sort_dir == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+        </a>
+    {% endfor %}
+</div>
 {% endif %}
+
+{% if shows %}
+    {% if view == 'rails' %}
+        {% for cat, label in [('major','Major producing houses'),('mid','Mid-sized & specialist'),('fringe','Fringe & pub'),('outer','Outer London')] %}
+            {% set rail = rails[cat] %}
+            {% if rail.total > 0 %}
+                <section class="rail">
+                    <div class="rail-head">
+                        <div class="rail-idx">{{ '%02d' % loop.index }}</div>
+                        <h2 class="rail-title">{{ label }} <small>{{ rail.total }} shows</small></h2>
+                        <a class="rail-count" href="{{ chip_url(cat=cat, view='list') }}">View all ›</a>
+                    </div>
+                    <div class="rail-grid">
+                        {% for s in rail.picks %}
+                            {{ card(s) }}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <section class="list">
+            <div class="list-head">
+                <div class="list-head-mono">All shows · {{ '{:,}'.format(shows | length) }}</div>
+            </div>
+            <div class="row-list">
+                {% for s in shows %}
+                    {{ index_row(loop.index, s) }}
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+{% else %}
+    <p class="empty">No shows match. Try clearing filters, or hit Refresh.</p>
+{% endif %}
+
 {% endblock %}

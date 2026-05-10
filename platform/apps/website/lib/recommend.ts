@@ -29,6 +29,7 @@ function score(vibeTokens: Set<string>, show: Show): number {
   const haystack = new Set<string>([
     ...show.genres,
     ...show.tags,
+    show.show_type,
     ...tokenize(show.title),
     ...tokenize(show.description_short),
   ]);
@@ -37,6 +38,7 @@ function score(vibeTokens: Set<string>, show: Show): number {
   // tiny boost for cheap shows when the vibe mentions "cheap" / "broke"
   if (
     (vibeTokens.has('cheap') || vibeTokens.has('broke')) &&
+    show.price_max != null &&
     show.price_max > 0 &&
     show.price_max <= 15
   ) {

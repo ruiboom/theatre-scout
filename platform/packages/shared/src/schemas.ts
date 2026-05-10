@@ -30,6 +30,21 @@ const NearLatLng = z.object({
 
 // ---- search_shows ----
 
+const ShowTypeEnum = z.enum([
+  'play',
+  'musical',
+  'comedy',
+  'dance',
+  'opera',
+  'family',
+  'cabaret',
+  'other',
+]);
+
+const VenueCategoryEnum = z.enum(['major', 'mid', 'fringe', 'outer']);
+
+const WhenChip = z.enum(['today', 'week', 'new']);
+
 export const SearchShowsInput = z.object({
   date_from: isoDate.optional(),
   date_to: isoDate.optional(),
@@ -40,7 +55,19 @@ export const SearchShowsInput = z.object({
   genres: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   venue_ids: z.array(id).optional(),
-  limit: z.number().int().min(1).max(50).optional().default(20),
+  /** Filter by venue tier — surfaces the rails-view category filter. */
+  category: VenueCategoryEnum.optional(),
+  /** Filter by show type — heuristic-classified at scrape time. */
+  show_type: ShowTypeEnum.optional(),
+  /** Web UI chip: "today" / "week" / "new". Resolves server-side to a date window. */
+  when: WhenChip.optional(),
+  /** Free-text title search. */
+  q: z.string().min(1).max(200).optional(),
+  /** Sort field for the list view. */
+  sort: z.enum(['start_date', 'end_date', 'title', 'venue']).optional(),
+  /** Sort direction. */
+  dir: z.enum(['asc', 'desc']).optional(),
+  limit: z.number().int().min(1).max(200).optional().default(20),
 });
 export type SearchShowsInput = z.infer<typeof SearchShowsInput>;
 

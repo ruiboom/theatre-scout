@@ -1,89 +1,247 @@
-"""
-Shared HTTP client.
+"""Polite HTTP client. Backed by Scrapling sessions:
 
-- 1 request / second per host (token bucket)
-- Polite User-Agent
-- Optional on-disk response cache for dev (set SCRAPER_CACHE=1)
+- A `FetcherSession` (curl_cffi + Chrome TLS) for the fast path. Connection-pooled.
+- A `StealthySession` (Patchright headless browser) for the stealth path. Browser
+  is launched once per Client and reused across stealth venues.
+
+Both sessions are lazy-initialised; a `Client` that never sees a stealth call
+never launches a browser. Always use `Client` as a context manager (or call
+`close()` explicitly) so the underlying connections / browser shut down cleanly.
+
+Ported from scout/http.py — same shape so adapters port cleanly.
 """
 
 from __future__ import annotations
 
-import hashlib
-import os
+import logging
+import threading
 import time
-from collections import defaultdict
-from pathlib import Path
-from threading import Lock
-from urllib.parse import urlsplit
-
-import httpx
+import urllib.parse
+import urllib.robotparser
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from types import TracebackType
+from typing import Any
 
 USER_AGENT = "AnywhereBuTheWestEnd/0.1 (+https://anywhere.example.com/bot)"
-CACHE_DIR = Path(".cache/scraper")
-CACHE_TTL_SEC = 60 * 60  # 1 hour
+
+log = logging.getLogger(__name__)
 
 
-class _PerHostBucket:
-    """1 request per second per host. Thread-safe."""
+class RateLimiter:
+    """Per-host token bucket. Thread-safe: each host has its own lock so concurrent
+    callers to the same host serialize, while callers to different hosts proceed
+    in parallel. Sleeps just enough to keep `min_interval` between hits."""
 
-    def __init__(self, rate_per_sec: float = 1.0):
-        self._interval = 1.0 / rate_per_sec
-        self._last: dict[str, float] = defaultdict(float)
-        self._lock = Lock()
+    def __init__(
+        self,
+        *,
+        min_interval: float = 1.0,
+        now: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._min_interval = min_interval
+        self._now = now
+        self._sleep = sleep
+        self._last_at: dict[str, float] = {}
+        self._registry_lock = threading.Lock()
+        self._host_locks: dict[str, threading.Lock] = {}
 
-    def wait_then_mark(self, host: str) -> None:
-        with self._lock:
-            elapsed = time.monotonic() - self._last[host]
-            if elapsed < self._interval:
-                time.sleep(self._interval - elapsed)
-            self._last[host] = time.monotonic()
+    def _lock_for(self, host: str) -> threading.Lock:
+        with self._registry_lock:
+            lock = self._host_locks.get(host)
+            if lock is None:
+                lock = threading.Lock()
+                self._host_locks[host] = lock
+            return lock
+
+    def wait_for(self, host: str) -> None:
+        with self._lock_for(host):
+            last = self._last_at.get(host)
+            if last is not None:
+                wait = self._min_interval - (self._now() - last)
+                if wait > 0:
+                    self._sleep(wait)
+            self._last_at[host] = self._now()
 
 
-class Http:
-    def __init__(self, *, cache: bool | None = None) -> None:
-        self._cache = cache if cache is not None else os.getenv("SCRAPER_CACHE") == "1"
-        self._buckets = _PerHostBucket()
-        self._client = httpx.Client(
-            headers={"user-agent": USER_AGENT},
-            timeout=20.0,
-            follow_redirects=True,
-        )
-        if self._cache:
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+def is_allowed(url: str, robots_txt: str | None, *, user_agent: str = USER_AGENT) -> bool:
+    if not robots_txt:
+        return True
+    parser = urllib.robotparser.RobotFileParser()
+    parser.parse(robots_txt.splitlines())
+    return parser.can_fetch(user_agent, url)
 
-    def get(self, url: str) -> str:
-        if self._cache:
-            cached = self._read_cache(url)
-            if cached is not None:
-                return cached
 
-        host = urlsplit(url).netloc
-        self._buckets.wait_then_mark(host)
+@dataclass(frozen=True)
+class Response:
+    url: str
+    status_code: int
+    content: bytes
 
-        resp = self._client.get(url)
-        resp.raise_for_status()
-        body = resp.text
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8", errors="replace")
 
-        if self._cache:
-            self._write_cache(url, body)
-        return body
+
+FetchFn = Callable[[str], Response | None]
+
+
+class Client:
+    """Polite client: rate-limited, robots-aware, with optional stealth escalation."""
+
+    def __init__(
+        self,
+        *,
+        rate_limiter: RateLimiter | None = None,
+        fetch_fn: FetchFn | None = None,
+        stealth_fetch_fn: FetchFn | None = None,
+        fetch_robots: Callable[[str], str | None] | None = None,
+        user_agent: str = USER_AGENT,
+    ) -> None:
+        self._rate = rate_limiter or RateLimiter()
+        self._user_agent = user_agent
+        self._robots_cache: dict[str, str | None] = {}
+        # Test injection points; if not provided, lazy-init Scrapling sessions.
+        self._fetch_fn_override = fetch_fn
+        self._stealth_fetch_fn_override = stealth_fetch_fn
+        self._fetch_robots_override = fetch_robots
+        # Each tuple is (entered_handle, context_manager) so we can call __exit__
+        # on the original CM while using the entered handle for requests.
+        self._fetcher_session: tuple[Any, Any] | None = None
+        self._stealth_session: tuple[Any, Any] | None = None
+        # Patchright greenlets bind to the thread that opens the session, so a
+        # session created on the main thread (Phase 1 listings) crashes when
+        # a worker thread tries to use it (Phase 2 enrichment). Pin every
+        # stealth fetch to one dedicated background thread that owns the
+        # browser end-to-end. Lazy-launched on first stealth call.
+        self._stealth_executor: ThreadPoolExecutor | None = None
+        self._stealth_executor_lock = threading.Lock()
+
+    # ---- context manager so sessions get closed cleanly ----
+    def __enter__(self) -> Client:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.close()
 
     def close(self) -> None:
-        self._client.close()
+        if self._fetcher_session is not None:
+            _, cm = self._fetcher_session
+            try:
+                cm.__exit__(None, None, None)
+            except Exception as e:
+                log.warning("error closing fetcher session: %s", e)
+            self._fetcher_session = None
+        # Stealth session must be torn down on the same thread that opened it.
+        if self._stealth_executor is not None:
+            try:
+                self._stealth_executor.submit(self._close_stealth_on_owner_thread).result(
+                    timeout=10
+                )
+            except Exception as e:
+                log.warning("error closing stealth session: %s", e)
+            self._stealth_executor.shutdown(wait=True)
+            self._stealth_executor = None
 
-    # ---- cache ----
+    def _close_stealth_on_owner_thread(self) -> None:
+        if self._stealth_session is not None:
+            _, cm = self._stealth_session
+            try:
+                cm.__exit__(None, None, None)
+            except Exception as e:
+                log.warning("error closing stealth session: %s", e)
+            self._stealth_session = None
 
-    def _cache_path(self, url: str) -> Path:
-        h = hashlib.sha256(url.encode()).hexdigest()[:24]
-        return CACHE_DIR / f"{h}.html"
-
-    def _read_cache(self, url: str) -> str | None:
-        p = self._cache_path(url)
-        if not p.exists():
+    # ---- public API ----
+    def get(self, url: str, *, stealth: bool = False) -> Response | None:
+        host = urllib.parse.urlparse(url).netloc
+        if not self._is_allowed(url, host):
             return None
-        if (time.time() - p.stat().st_mtime) > CACHE_TTL_SEC:
-            return None
-        return p.read_text(encoding="utf-8")
+        self._rate.wait_for(host)
+        return self._stealth_fetch(url) if stealth else self._fetch(url)
 
-    def _write_cache(self, url: str, body: str) -> None:
-        self._cache_path(url).write_text(body, encoding="utf-8")
+    # ---- internals ----
+    def _fetch(self, url: str) -> Response | None:
+        if self._fetch_fn_override is not None:
+            return self._fetch_fn_override(url)
+        try:
+            page = self._fetcher().get(url, stealthy_headers=True, timeout=20)
+        except Exception as exc:
+            log.warning("fetch failed for %s: %s", url, exc)
+            return None
+        return _to_response(page)
+
+    def _stealth_fetch(self, url: str) -> Response | None:
+        if self._stealth_fetch_fn_override is not None:
+            return self._stealth_fetch_fn_override(url)
+        # Hand the work to the dedicated browser-owner thread; calling threads
+        # block on the future, which gives us serialisation for free.
+        return self._get_stealth_executor().submit(self._stealth_fetch_in_owner, url).result()
+
+    def _stealth_fetch_in_owner(self, url: str) -> Response | None:
+        try:
+            page = self._stealth().fetch(url)
+        except Exception as exc:
+            log.warning("stealth fetch failed for %s: %s", url, exc)
+            return None
+        return _to_response(page)
+
+    def _get_stealth_executor(self) -> ThreadPoolExecutor:
+        if self._stealth_executor is None:
+            with self._stealth_executor_lock:
+                if self._stealth_executor is None:
+                    self._stealth_executor = ThreadPoolExecutor(
+                        max_workers=1, thread_name_prefix="scrapers-stealth"
+                    )
+        return self._stealth_executor
+
+    def _fetcher(self) -> Any:
+        if self._fetcher_session is None:
+            from scrapling.fetchers import FetcherSession
+
+            cm = FetcherSession(impersonate="chrome", stealthy_headers=True, timeout=20, retries=2)
+            handle = cm.__enter__()
+            self._fetcher_session = (handle, cm)
+        return self._fetcher_session[0]
+
+    def _stealth(self) -> Any:
+        if self._stealth_session is None:
+            from scrapling.fetchers import StealthySession
+
+            cm = StealthySession(
+                headless=True,
+                disable_resources=True,
+                network_idle=True,
+                timeout=45000,
+            )
+            handle = cm.__enter__()  # type: ignore[no-untyped-call]
+            self._stealth_session = (handle, cm)
+        return self._stealth_session[0]
+
+    def _is_allowed(self, url: str, host: str) -> bool:
+        if host not in self._robots_cache:
+            try:
+                self._robots_cache[host] = self._robots_for(host)
+            except Exception:
+                self._robots_cache[host] = None
+        return is_allowed(url, self._robots_cache[host], user_agent=self._user_agent)
+
+    def _robots_for(self, host: str) -> str | None:
+        if self._fetch_robots_override is not None:
+            return self._fetch_robots_override(host)
+        resp = self._fetch(f"https://{host}/robots.txt")
+        if resp is None or resp.status_code != 200:
+            return None
+        return resp.text
+
+
+def _to_response(page: Any) -> Response:
+    body = page.body if isinstance(page.body, bytes) else str(page).encode("utf-8")
+    return Response(url=str(page.url), status_code=int(page.status), content=body)

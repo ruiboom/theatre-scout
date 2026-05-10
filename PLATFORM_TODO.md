@@ -38,7 +38,10 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 
 ## Phase C — known follow-ups (don't block on these)
 
-- [ ] Port `scout/` adapters into `platform/apps/scrapers/scrapers/adapters/` one venue at a time (see existing scout adapters as the reference)
+- [ ] Port `scout/` adapters into `platform/apps/scrapers/scrapers/adapters/` one venue at a time (the API now matches scout's exactly — most ports are: copy the file, swap `scout.x` → `..x` imports, add `@register`, add to `adapters/__init__.py::load_all()`)
+- [ ] Add a "Refresh" button on the platform website that triggers a GitHub Actions `workflow_dispatch` (live `scout/` does this in-process; serverless deployment can't, so route it through Actions)
+- [ ] Live venue map widget on `/venues/[slug]` — port Leaflet block from `scout/web/templates/theatre.html`, source coordinates from `theatre-coords.yaml`
+- [ ] "New" filter chip on `/shows` should query `first_seen_at` directly (currently falls back to recent ordering)
 - [ ] Replace the rule-based recommender in `apps/website/lib/recommend.ts` with an Anthropic call once the tag taxonomy is rich enough
 - [ ] Flesh out the stubbed `/openapi.json` in `apps/mcp-server/src/index.ts` for the Custom GPT
 - [ ] Email integration (Beehiiv or Buttondown) — pull "new this week" via the API on a cron
@@ -50,13 +53,13 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 
 ## What's already done in the bootstrap
 
-For reference when you come back — these are the artefacts in [`platform/`](platform/):
+For reference when you come back — artefacts in [`platform/`](platform/):
 
 - Monorepo: pnpm workspaces + turbo
-- `packages/shared` — types + zod schemas (the contract between every surface)
-- `packages/db` — Postgres schema with PostGIS + tsvector FTS, migration runner
-- `apps/website` — Next.js 15 App Router, six API routes with real SQL queries, server-rendered pages
+- `packages/shared` — types + zod schemas (the contract between every surface), aligned with scout's `Show` shape (image_url, start_date, end_date, show_type, venue category)
+- `packages/db` — Postgres schema with PostGIS + tsvector FTS; migration `0002_align_with_scout.sql` adds shows.start_date/end_date and venues.postcode_prefix
+- `apps/website` — Next.js 15, six API routes with real SQL queries, **Swiss Index UI** (design-guide CSS imported byte-for-byte), home venue index, `/shows` rails+list with Today/This week/New chips + sort + filters, `/venues/[slug]` programme view
 - `apps/mcp-server` — TS MCP on Cloudflare Workers, six tools wired to the API via `agents/mcp`
-- `apps/scrapers` — Python scaffolding (BaseAdapter, normalize, writer, CLI, example adapter)
-- `scripts/seed.sql` — 3 venues, 6 shows, performances spanning today→next month
+- `apps/scrapers` — **Scrapling-based** ingestion mirroring scout's Tier 3: `FetcherSession` + `StealthySession` with dedicated browser thread, 3-phase orchestrator (serial listings → parallel enrich with round-robin → serial writes), per-adapter `enrich()` hook, GenericAdapter + `bulk.py`, `classify.py`, JSON-LD + date-range helpers — adapter API is byte-identical to scout's so existing adapters port mechanically
+- `scripts/seed.sql` — 3 venues with postcodes, 6 shows with start_date/end_date, performances
 - `docs/` — copies of architecture, tool surface, build plan, positioning, audience strategy

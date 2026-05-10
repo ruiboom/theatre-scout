@@ -1,88 +1,17 @@
-/* Minimal placeholder styles. Replace with the real design system later. */
+/* The Swiss Index design system. Tokens + helper classes live in
+ * `theatre-scout.css`; site chrome and page-specific layouts live in
+ * `style.css`. Both come from `design-guide/`, ported byte-for-byte so the
+ * platform UI inherits scout's visual identity. */
 
-:root {
-  --bg: #fafaf7;
-  --fg: #1a1a1a;
-  --muted: #6b6b6b;
-  --accent: #c8392b;
-  --rule: #e5e3dc;
-  --max-w: 64rem;
-  font-family: ui-serif, Georgia, 'Times New Roman', serif;
-}
+@import './theatre-scout.css';
+@import './style.css';
 
-* {
-  box-sizing: border-box;
-}
+/* Tiny additions on top of the imported sheets — keep these short; anything
+ * substantial should land in the design system itself. */
 
-body {
-  margin: 0;
-  color: var(--fg);
-  background: var(--bg);
-  line-height: 1.55;
-}
+a { color: inherit; }
 
-a {
-  color: var(--accent);
-}
-
-main {
-  max-width: var(--max-w);
-  margin: 2rem auto;
-  padding: 0 1.25rem;
-}
-
-.site-header {
-  max-width: var(--max-w);
-  margin: 1.5rem auto 0;
-  padding: 0 1.25rem 1rem;
-  border-bottom: 1px solid var(--rule);
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.site-header .brand {
-  font-weight: 600;
-  font-size: 1.25rem;
-  text-decoration: none;
-  color: var(--fg);
-}
-
-.site-header nav {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.site-footer {
-  max-width: var(--max-w);
-  margin: 4rem auto 2rem;
-  padding: 2rem 1.25rem 0;
-  border-top: 1px solid var(--rule);
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.show-card {
-  display: block;
-  padding: 1.25rem 0;
-  border-bottom: 1px solid var(--rule);
-  text-decoration: none;
-  color: inherit;
-}
-
-.show-card h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.4rem;
-}
-
-.show-card .meta {
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.empty-state {
-  padding: 3rem 0;
-  text-align: center;
-  color: var(--muted);
-}
+/* Stretch the document so sticky bar + footer behave like scout's jinja site. */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; min-height: 100vh; }
+main.page { flex: 1; }

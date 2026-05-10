@@ -14,15 +14,15 @@ BEGIN;
 
 -- ---- venues ---------------------------------------------------------------
 
-INSERT INTO venues (slug, name, neighbourhood, nearest_tube, description, capacity, address, location, website, category)
+INSERT INTO venues (slug, name, neighbourhood, postcode_prefix, nearest_tube, description, capacity, address, location, website, category)
 VALUES
-  ('bush-theatre', 'Bush Theatre', 'Shepherd''s Bush', 'Shepherd''s Bush Market', 'A leading new-writing theatre in west London.', 144, '7 Uxbridge Rd, London W12 8LJ',
+  ('bush-theatre', 'Bush Theatre', 'Shepherd''s Bush', 'W12', 'Shepherd''s Bush Market', 'A leading new-writing theatre in west London.', 144, '7 Uxbridge Rd, London W12 8LJ',
    ST_SetSRID(ST_MakePoint(-0.2261, 51.5050), 4326)::geography,
    'https://www.bushtheatre.co.uk', 'major'),
-  ('park-theatre', 'Park Theatre', 'Finsbury Park', 'Finsbury Park', 'Two-stage theatre with bold programming in north London.', 200, 'Clifton Terrace, London N4 3JP',
+  ('park-theatre', 'Park Theatre', 'Finsbury Park', 'N4', 'Finsbury Park', 'Two-stage theatre with bold programming in north London.', 200, 'Clifton Terrace, London N4 3JP',
    ST_SetSRID(ST_MakePoint(-0.1063, 51.5642), 4326)::geography,
    'https://www.parktheatre.co.uk', 'major'),
-  ('finborough-theatre', 'Finborough Theatre', 'Earl''s Court', 'Earl''s Court', 'Tiny pub theatre with an outsized literary reputation.', 50, '118 Finborough Rd, London SW10 9ED',
+  ('finborough-theatre', 'Finborough Theatre', 'Earl''s Court', 'SW10', 'Earl''s Court', 'Tiny pub theatre with an outsized literary reputation.', 50, '118 Finborough Rd, London SW10 9ED',
    ST_SetSRID(ST_MakePoint(-0.1922, 51.4877), 4326)::geography,
    'https://finboroughtheatre.co.uk', 'fringe');
 
@@ -48,15 +48,19 @@ INSERT INTO shows (
   slug, venue_id, title, show_type,
   description_short, description_full,
   price_min_pence, price_max_pence,
+  start_date, end_date,
   duration_minutes, age_rating, content_warnings,
-  booking_url, writer, director, cast_members
+  image_url, booking_url, writer, director, cast_members
 )
 SELECT * FROM (VALUES
   ('the-borrowed-time', (SELECT id FROM v WHERE slug='bush-theatre'),
    'The Borrowed Time', 'play',
    'A two-hander about grief, time and the music we keep coming back to.',
    'A lyrical, funny, devastating play set in a flat above a Shepherd''s Bush record shop. Two estranged siblings sort through their late father''s LP collection and find more than they bargained for.',
-   1500, 2500, 95, '14+', ARRAY['grief','death of a parent']::text[],
+   1500, 2500,
+   (CURRENT_DATE)::date, (CURRENT_DATE + 30)::date,
+   95, '14+', ARRAY['grief','death of a parent']::text[],
+   NULL,
    'https://www.bushtheatre.co.uk/event/borrowed-time/', 'Aoife Ó Murchú',
    'Lynette Linton', ARRAY['Sope Dirisu','Niamh Cusack']),
 
@@ -64,7 +68,10 @@ SELECT * FROM (VALUES
    'Night Bus', 'comedy',
    'Six strangers, one N207 bus, fifty-five minutes from Acton to Holborn.',
    'A late-night comedy of errors that won''t let you off until the last stop.',
-   1000, 1800, 70, '16+', ARRAY['strong language']::text[],
+   1000, 1800,
+   (CURRENT_DATE + 14)::date, (CURRENT_DATE + 45)::date,
+   70, '16+', ARRAY['strong language']::text[],
+   NULL,
    'https://www.bushtheatre.co.uk/event/night-bus/', 'Tess Walker',
    'Daniel Bailey', ARRAY[]::text[]),
 
@@ -72,7 +79,10 @@ SELECT * FROM (VALUES
    'Queer Cartography', 'play',
    'A queer love story mapped across thirty years of north London.',
    'Spans Stoke Newington 1994 to Finsbury Park 2024, told in vignettes.',
-   1200, 2200, 110, NULL, ARRAY[]::text[],
+   1200, 2200,
+   (CURRENT_DATE + 1)::date, (CURRENT_DATE + 60)::date,
+   110, NULL, ARRAY[]::text[],
+   NULL,
    'https://www.parktheatre.co.uk/event/queer-cartography/', 'Jake Boon',
    'Jamie Armitage', ARRAY['Sara Powell','Ali Wright']),
 
@@ -80,7 +90,10 @@ SELECT * FROM (VALUES
    'The Machine Room', 'play',
    'A factory closes. The workers stay. A political ghost story.',
    'Set in a Sheffield steel mill in 1986, a chorus of nine workers refuse to leave and find that the building has its own ideas.',
-   1500, 2800, 130, '15+', ARRAY['themes of class violence']::text[],
+   1500, 2800,
+   (CURRENT_DATE + 7)::date, (CURRENT_DATE + 90)::date,
+   130, '15+', ARRAY['themes of class violence']::text[],
+   NULL,
    'https://www.parktheatre.co.uk/event/machine-room/', 'Ifeyinwa Frederick',
    'Roy Alexander Weise', ARRAY[]::text[]),
 
@@ -88,7 +101,10 @@ SELECT * FROM (VALUES
    'What The Cat Knew', 'comedy',
    'A one-woman show about cats, surveillance and the council.',
    'Weirder than it sounds. Funnier than it has any right to be.',
-   1200, 1500, 60, '12+', ARRAY[]::text[],
+   1200, 1500,
+   (CURRENT_DATE)::date, (CURRENT_DATE + 14)::date,
+   60, '12+', ARRAY[]::text[],
+   NULL,
    'https://finboroughtheatre.co.uk/whatthecatknew/', 'Rosie Beckett',
    'Rosie Beckett', ARRAY['Rosie Beckett']),
 
@@ -96,12 +112,16 @@ SELECT * FROM (VALUES
    'A Modest Revolt', 'play',
    'A neglected 1968 play, reclaimed.',
    'The Finborough revives a forgotten piece by a Black British playwright who never saw a second London production. Eight performances only.',
-   1400, 1800, 100, NULL, ARRAY[]::text[],
+   1400, 1800,
+   (CURRENT_DATE + 21)::date, (CURRENT_DATE + 35)::date,
+   100, NULL, ARRAY[]::text[],
+   NULL,
    'https://finboroughtheatre.co.uk/modestrevolt/', 'Mustapha Matura',
    'Tinuke Craig', ARRAY[]::text[])
 ) AS new_shows(slug, venue_id, title, show_type, description_short, description_full,
-               price_min_pence, price_max_pence, duration_minutes, age_rating,
-               content_warnings, booking_url, writer, director, cast_members);
+               price_min_pence, price_max_pence, start_date, end_date,
+               duration_minutes, age_rating, content_warnings,
+               image_url, booking_url, writer, director, cast_members);
 
 -- ---- show_tags ------------------------------------------------------------
 

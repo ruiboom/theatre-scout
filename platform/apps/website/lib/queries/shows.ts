@@ -1,5 +1,5 @@
 import { sql } from '../db';
-import type { Show, ShowDetail } from '@platform/shared';
+import type { Show, ShowDetail, ShowType } from '@platform/shared';
 import type { SearchShowsInput } from '@platform/shared';
 
 /**
@@ -7,8 +7,8 @@ import type { SearchShowsInput } from '@platform/shared';
  * The TOOL_SURFACE Show shape is GBP. Pence-precision stays in the DB and the
  * raw_data JSON for anyone who needs it.
  */
-function penceToGbp(pence: number | null): number {
-  return pence == null ? 0 : Math.round(pence / 100);
+function penceToGbp(pence: number | null): number | null {
+  return pence == null ? null : Math.round(pence / 100);
 }
 
 /** Hydrate a row into the canonical Show shape. */
@@ -16,12 +16,16 @@ type ShowRow = {
   id: string;
   slug: string;
   title: string;
+  show_type: ShowType;
   description_short: string;
   price_min_pence: number | null;
   price_max_pence: number | null;
+  start_date: string | null;
+  end_date: string | null;
   duration_minutes: number | null;
   age_rating: string | null;
   content_warnings: string[];
+  image_url: string | null;
   booking_url: string;
   next_performance: string | null;
   performance_count: number;
@@ -32,6 +36,7 @@ type ShowRow = {
   venue_name: string;
   venue_neighbourhood: string;
   venue_nearest_tube: string | null;
+  venue_category: 'major' | 'mid' | 'fringe' | 'outer';
 };
 
 function rowToShow(r: ShowRow): Show {
@@ -39,20 +44,25 @@ function rowToShow(r: ShowRow): Show {
     id: r.id,
     slug: r.slug,
     title: r.title,
+    show_type: r.show_type,
     venue: {
       id: r.venue_id,
       slug: r.venue_slug,
       name: r.venue_name,
       neighbourhood: r.venue_neighbourhood,
       nearest_tube: r.venue_nearest_tube,
+      category: r.venue_category,
     },
     description_short: r.description_short,
     genres: r.genres ?? [],
     tags: r.tags ?? [],
     price_min: penceToGbp(r.price_min_pence),
     price_max: penceToGbp(r.price_max_pence),
-    next_performance: r.next_performance,
+    start_date: r.start_date,
+    end_date: r.end_date,
+    next_performance: r.next_performance ?? r.start_date,
     performance_count: Number(r.performance_count) || 0,
+    image_url: r.image_url,
     duration_minutes: r.duration_minutes,
     age_rating: r.age_rating,
     content_warnings: r.content_warnings ?? [],
@@ -68,18 +78,23 @@ const showColumns = sql`
   s.id,
   s.slug,
   s.title,
+  s.show_type,
   s.description_short,
   s.price_min_pence,
   s.price_max_pence,
+  s.start_date,
+  s.end_date,
   s.duration_minutes,
   s.age_rating,
   s.content_warnings,
+  s.image_url,
   s.booking_url,
   v.id   AS venue_id,
   v.slug AS venue_slug,
   v.name AS venue_name,
   v.neighbourhood AS venue_neighbourhood,
   v.nearest_tube  AS venue_nearest_tube,
+  v.category      AS venue_category,
   (
     SELECT MIN(p.starts_at)
       FROM performances p
@@ -107,6 +122,12 @@ const showColumns = sql`
  *
  * Defaults: this week (today → +7 days), date order, limit 20.
  * Empty result returns `{ shows: [], total: 0 }`, never null.
+ *
+ * The "is the show running on date X" check looks at BOTH `performances` (when
+ * the venue exposes per-night times) AND the show's `start_date`/`end_date`
+ * range (when only a run window is known). Most listings only give a range —
+ * scout's adapters write start/end and skip performances entirely — so the
+ * fallback path is the common case.
  */
 export async function searchShows(
   input: SearchShowsInput,
@@ -119,13 +140,29 @@ export async function searchShows(
   const minPrice = (input.min_price ?? 0) * 100;
   const maxPrice = input.max_price != null ? input.max_price * 100 : null;
 
-  const filters = sql`
-    EXISTS (
-      SELECT 1 FROM performances p
-       WHERE p.show_id = s.id
-         AND p.starts_at::date BETWEEN ${dateFrom}::date AND ${dateTo}::date
+  // Prefer per-show performances when present; fall back to start_date/end_date
+  // range overlap. The two sources are complementary, never contradictory.
+  const dateOverlap = sql`
+    (
+      EXISTS (
+        SELECT 1 FROM performances p
+         WHERE p.show_id = s.id
+           AND p.starts_at::date BETWEEN ${dateFrom}::date AND ${dateTo}::date
+      )
+      OR (
+        s.start_date IS NOT NULL
+        AND s.start_date <= ${dateTo}::date
+        AND (s.end_date IS NULL OR s.end_date >= ${dateFrom}::date)
+      )
     )
+  `;
+
+  const filters = sql`
+    ${dateOverlap}
     ${input.neighbourhood ? sql`AND v.neighbourhood ILIKE ${input.neighbourhood}` : sql``}
+    ${input.category ? sql`AND v.category = ${input.category}` : sql``}
+    ${input.show_type ? sql`AND s.show_type = ${input.show_type}` : sql``}
+    ${input.q ? sql`AND s.search_tsv @@ websearch_to_tsquery('english', ${input.q})` : sql``}
     ${
       input.near
         ? sql`AND ST_DWithin(
@@ -168,15 +205,14 @@ export async function searchShows(
     }
   `;
 
+  const orderBy = orderByFor(input.sort, input.dir);
+
   const rows = (await sql<ShowRow[]>`
     SELECT ${showColumns}
       FROM shows s
       JOIN venues v ON v.id = s.venue_id
      WHERE ${filters}
-     ORDER BY (
-       SELECT MIN(p.starts_at) FROM performances p
-        WHERE p.show_id = s.id AND p.starts_at >= NOW()
-     ) NULLS LAST, s.title
+     ORDER BY ${orderBy}
      LIMIT ${limit}
   `) as ShowRow[];
 
@@ -188,6 +224,30 @@ export async function searchShows(
   `;
 
   return { shows: rows.map(rowToShow), total: count };
+}
+
+/** Sort field → SQL ORDER BY clause. Mirrors scout's sort options. */
+function orderByFor(
+  field: SearchShowsInput['sort'],
+  dir: SearchShowsInput['dir'],
+) {
+  const desc = dir === 'desc';
+  const direction = desc ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`;
+  switch (field) {
+    case 'title':
+      return sql`LOWER(s.title) ${direction}`;
+    case 'venue':
+      return sql`LOWER(v.name) ${direction}`;
+    case 'end_date':
+      return sql`s.end_date ${direction}, LOWER(s.title)`;
+    case 'start_date':
+    default:
+      return sql`COALESCE(
+        (SELECT MIN(p.starts_at)::date FROM performances p
+          WHERE p.show_id = s.id AND p.starts_at >= NOW()),
+        s.start_date
+      ) ${direction}, LOWER(s.title)`;
+  }
 }
 
 /** get_show — full detail for a single show. */

@@ -72,6 +72,25 @@ pnpm --filter website dev          # http://localhost:3000
 - API versioned at `/api/v1/...` from day one. Breaking changes bump to `/v2`.
 - One adapter per venue, one fixture per adapter, one parse-test per adapter.
 
+## Aligned with `scout/`
+
+Everything below was lifted byte-for-byte (or near it) from the production `scout/` site at the repo root, so a future port of any scout adapter / UI piece is mechanical:
+
+| Concern | Scout | Platform |
+|---------|-------|----------|
+| HTTP engine | `scrapling.fetchers.FetcherSession` + `StealthySession` | same — `apps/scrapers/scrapers/http.py` |
+| Adapter API | `BaseAdapter` with `parse(html, base_url) → list[Show]` and `enrich(html, base_url) → dict` | same — `apps/scrapers/scrapers/adapters/base.py` |
+| Generic adapter | `(slug, url, css)` tuples in `scout/adapters/bulk.py` | same — `apps/scrapers/scrapers/adapters/bulk.py` |
+| Show classifier | `scout/classify.py` | ported verbatim — `apps/scrapers/scrapers/classify.py` |
+| JSON-LD + date helpers | `scout/adapters/_jsonld.py`, `_html.py` | ported verbatim |
+| Text helpers | `scout/text.py`, `scout/enrich.py` | ported verbatim |
+| Orchestrator | 3-phase: serial listings → parallel enrich (round-robin) → serial DB writes | same — `apps/scrapers/scrapers/runner.py` |
+| Show data shape | `theatre_slug`, `url`, `start_date`, `end_date`, `image_url`, `price_min/max` (pence) | same on the adapter side; the writer maps onto `venue_id`, `booking_url`, `price_min_pence` etc. |
+| Design system | Swiss Index (`design-guide/theatre-scout.css`) + page chrome (`scout/web/static/style.css`) | imported by `apps/website/app/globals.css` |
+| UI pages | Home venue index · `/shows` rails+list · `/theatres/<slug>` | mirror in Next.js — `app/page.tsx` · `app/shows/page.tsx` · `app/venues/[slug]/page.tsx` |
+| Filter chips | Today / This week / New + type + venue tier + sort | same URL-encoded shape on `/shows` |
+| Per-row split | Title links external (booking), venue links internal | same |
+
 ## What's intentionally NOT here yet
 
 - Email sender (Beehiiv / Buttondown integration) — Phase 1 add-on.

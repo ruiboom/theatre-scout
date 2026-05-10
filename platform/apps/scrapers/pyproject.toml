@@ -3,16 +3,18 @@ name = "scrapers"
 version = "0.0.0"
 description = "Ingestion adapters: scrape 70 London theatres into the listings DB."
 requires-python = ">=3.11"
+# Stack matches scout/'s Tier 3 architecture:
+#   - scrapling.fetchers handle HTTP (FetcherSession curl_cffi + StealthySession Patchright)
+#   - scrapling.parser.Selector replaces bs4/lxml for HTML walking
+#   - dateutil for messy listing-page dates
+# Postgres replaces scout/'s SQLite, so psycopg is in.
 dependencies = [
-    "httpx>=0.28",
-    "beautifulsoup4>=4.12",
-    "lxml>=5.3",
+    "scrapling>=0.2.99",
     "pydantic>=2.9",
     "psycopg[binary]>=3.2",
     "typer>=0.13",
     "python-dateutil>=2.9",
     "pyyaml>=6.0",
-    "scrapling>=0.2.99",
 ]
 
 [project.optional-dependencies]

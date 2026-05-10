@@ -1,52 +1,77 @@
 # scrapers
 
-Python ingestion. One adapter per venue. The orchestrator runs adapters in parallel (across distinct domains), each adapter returns a list of normalised `Show` records, the writer upserts them into Postgres.
+Python ingestion. One adapter per venue. Architecture mirrors `scout/`'s Tier-3 design (Scrapling + 3-phase orchestrator + per-adapter `enrich()` hook) so the existing 30+ scout adapters port cleanly.
 
-## Why Python here, TypeScript everywhere else?
+## Stack
 
-The HTML-parsing surface is large and messy. Python's `httpx` + `bs4` + `lxml` + `scrapling` ecosystem is what we already know — switching to Node would be principled but produce no business value.
-
-Surfaces (website, MCP server) stay TypeScript because they share types with `@platform/shared`. Scrapers can be Python because their interface to the rest of the system is the database, not a TypeScript module.
+- **Scrapling** — `FetcherSession` (curl_cffi + Chrome TLS impersonation) for the fast path; `StealthySession` (Patchright headless browser) for JS-rendered or anti-bot venues.
+- **`scrapling.parser.Selector`** — replaces `bs4` / `lxml` for HTML walking. Adapter code is identical to scout.
+- **psycopg** — Postgres writes. The writer is the single place that translates the adapter-facing `Show` (scout-shaped: `theatre_slug`, `url`, `price_min` in pence) onto platform DB columns (`venue_id`, `booking_url`, `price_min_pence`, etc.).
 
 ## Layout
 
 ```
 scrapers/
-├── cli.py              `scrape all`, `scrape venue <slug>`, `scrape list`
-├── base.py             BaseAdapter (abstract) — every adapter is one class
-├── http.py             httpx client w/ rate limiting + dev cache
-├── normalize.py        free-form scraped dicts → strict Show / Performance
-├── writer.py           psycopg upsert into venues/shows/performances
-├── runner.py           orchestrator: load venues, dispatch, record runs
+├── cli.py            `scrape list / venue <slug> / all / sync-venues`
+├── classify.py       heuristic show-type classifier
+├── enrich.py         pure description + image extractors
+├── http.py           Scrapling-backed Client (rate-limit, robots, stealth thread)
+├── models.py         Show, Theatre, ScrapeRun (mirror scout's pydantic shape)
+├── runner.py         3-phase orchestrator with round-robin enrich
+├── text.py           clean_text / clean_description / slugify
+├── writer.py         psycopg writes; Show -> DB column mapping
 └── adapters/
-    ├── __init__.py     registry: slug → adapter class
-    └── example.py      placeholder, copy when adding a new venue
+    ├── __init__.py   load_all() — imports bespoke modules + bulk
+    ├── base.py       BaseAdapter (parse + enrich + requires_js + fetch)
+    ├── registry.py   @register decorator
+    ├── _generic.py   GenericAdapter (JSON-LD first, then card CSS)
+    ├── _html.py      parse_date_range — British date-range parser
+    ├── _jsonld.py    schema.org Event / TheaterEvent extractor
+    ├── bulk.py       (slug, url, css_selector) tuples → GenericAdapter subclasses
+    └── example.py    bespoke template
 ```
 
 ## Adding a venue
 
-1. Add it to `../../theatres.yaml` with a unique kebab-case `slug`.
-2. Save a representative HTML sample to `tests/fixtures/<slug>.html`.
-3. Create `scrapers/adapters/<slug>.py` subclassing `BaseAdapter`.
-4. Register it in `scrapers/adapters/__init__.py`.
-5. Write `tests/adapters/test_<slug>.py` that loads the fixture and asserts the parsed `Show` dicts.
-6. `uv run pytest tests/adapters/test_<slug>.py` and `uv run scrape venue <slug>`.
+Two paths, same as scout:
+
+1. **Generic** (most venues): add `("my-venue", "https://example.com/whats-on", 'a[href*="/event/"]')` to `bulk._ENTRIES`. The selector should land on cards that contain a title and link.
+2. **Bespoke** (when generic fails — button-text titles, JS-rendered, paginated): copy `adapters/example.py` to `adapters/<slug>.py`, override `parse()` (and optionally `enrich()`), set `requires_js = True` if the listing needs the stealth path, and add `from . import <slug>` to `adapters/__init__.py::load_all()`.
+
+Either way, you also need a row in the venues table — populate via `scrape sync-venues theatres.yaml` once, then it's there.
 
 ## Run
 
 ```bash
 cp ../../.env.example .env
+
+# (optional) install Patchright's bundled Chromium for stealth fetches
+uv run scrapling install --force
+
 uv sync
-uv run scrape list                  # show registered venues
-uv run scrape venue almeida         # one
-uv run scrape all                   # all of them, in parallel across domains
+uv run scrape list                                       # show registered venues
+uv run scrape venue example                              # one venue, listings only
+uv run scrape venue example --enrich --replace --workers 4   # full pipeline, single venue
+uv run scrape all --enrich --replace --workers 16        # full pipeline, all venues
 ```
 
-## Conventions (from `docs/ARCHITECTURE.md`)
+## Conventions
 
-- 1 req/sec per host, token-bucketed.
-- User-Agent: `AnywhereBuTheWestEnd/0.1 (+https://anywhere.example.com/bot)`
-- Honour robots.txt; skip disallowed paths and warn.
-- Cache responses for 1 hour in dev so iteration doesn't hammer venues.
-- Prefer `application/ld+json` `Event` / `TheaterEvent`. Fall back to HTML.
-- One failed adapter does not crash the run; orchestrator records a `failed` ScrapeRun and moves on.
+- 1 req/sec per host, token-bucketed (`http.py::RateLimiter`).
+- User-Agent: `AnywhereBuTheWestEnd/0.1 (+https://anywhere.example.com/bot)`.
+- Honour robots.txt; skip disallowed paths with a warning.
+- Prefer schema.org JSON-LD (`Event` / `TheaterEvent`); fall back to per-venue CSS.
+- One failed adapter never crashes the run — the orchestrator records a `failed` ScrapeRun for that venue and moves on.
+- Stealth fetches all funnel through one dedicated browser-owner thread. Patchright greenlets bind to whichever thread opens the session, so we can't share across worker threads.
+- Adapters are pure functions of `(html, base_url) -> list[Show]`. Tests load saved HTML fixtures and assert the parsed records — no network.
+
+## Porting from scout
+
+The adapter-facing API is byte-identical to scout's (same `BaseAdapter` shape, same `Show` fields, same `parse_jsonld` / `parse_date_range` helpers). Porting an adapter means:
+
+1. Copy `scout/adapters/<slug>.py` to `platform/apps/scrapers/scrapers/adapters/<slug>.py`.
+2. Update imports (`scout.foo` → `..foo` or `.foo`).
+3. Add `@register` on the class.
+4. Add the import in `adapters/__init__.py::load_all()`.
+
+That's the whole port. The 30+ scout adapters can move across one commit at a time.

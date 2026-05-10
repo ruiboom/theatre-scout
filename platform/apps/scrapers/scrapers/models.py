@@ -1,59 +1,99 @@
 """
-Pydantic models matching `packages/shared/src/types.ts`.
+Pydantic models for the ingest pipeline.
 
-These are the contract between scrapers (Python) and the database. Every
-adapter returns instances of `ScrapedShow`; the writer upserts them. If the
-TS types in @platform/shared change, update these too.
+Mirrors `scout/models.py` so adapters port cleanly. The writer
+(`scrapers.writer`) is the single place that translates these into platform DB
+columns (e.g. `theatre_slug` -> venue_id lookup, `url` -> `booking_url`,
+`price_min` integer pence -> `price_min_pence`).
 """
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Literal
+from datetime import date, datetime
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, HttpUrl, Field
 
-ShowType = Literal[
-    "play", "musical", "comedy", "dance", "opera", "family", "cabaret", "other"
-]
+Category = Literal["major", "mid", "fringe", "outer"]
+ShowType = Literal["play", "musical", "comedy", "dance", "opera", "family", "cabaret", "other"]
+ScrapeStatus = Literal["success", "partial", "failed"]
 TagType = Literal["genre", "tag"]
 
 
-class ScrapedTag(BaseModel):
+def _check_http_url(value: str) -> str:
+    if not (value.startswith("http://") or value.startswith("https://")):
+        raise ValueError(f"URL must start with http(s)://, got: {value!r}")
+    return value
+
+
+UrlStr = Annotated[str, AfterValidator(_check_http_url)]
+
+
+class Theatre(BaseModel):
+    """Mirrors scout's Theatre. The platform DB calls this `venues`; the writer
+    maps slug -> venues.id at insert time."""
+
+    model_config = ConfigDict(frozen=True)
+
     slug: str
     name: str
-    type: TagType
+    area: str  # platform DB column name is `neighbourhood` — same concept
+    postcode_prefix: str | None = None
+    category: Category
+    url: HttpUrl
 
 
 class ScrapedPerformance(BaseModel):
+    """Optional: only present when the venue exposes per-night times. Most
+    listings only give a date range; in that case the show row's
+    start_date/end_date are the canonical "what's playing" signal."""
+
     starts_at: datetime
     available_tickets_estimate: int | None = None
     sold_out: bool = False
-    raw_data: dict = Field(default_factory=dict)
+    raw_data: dict[str, Any] = Field(default_factory=dict)
 
 
-class ScrapedShow(BaseModel):
-    """One canonical show as produced by an adapter."""
+class Show(BaseModel):
+    """Adapter-facing record. Pure-pythoned shape that mirrors scout's Show.
 
-    model_config = ConfigDict(extra="forbid")
+    Optional richer fields (description_full, performances, content_warnings,
+    creators) can be filled by venue-specific bespoke adapters when the venue
+    exposes them; the generic adapter only needs the core six.
+    """
 
-    venue_slug: str
-    slug: str
+    model_config = ConfigDict(frozen=True)
+
+    theatre_slug: str
     title: str
     show_type: ShowType = "other"
-    description_short: str = ""
+    description: str = ""
+    url: UrlStr  # → booking_url in DB
+    start_date: date | None = None
+    end_date: date | None = None
+    price_min: int | None = None  # pence → price_min_pence in DB
+    price_max: int | None = None  # pence → price_max_pence in DB
+    image_url: UrlStr | None = None
+
+    # ---- optional richer fields (only set when adapter has them) ----
     description_full: str = ""
-    price_min_pence: int | None = None
-    price_max_pence: int | None = None
     duration_minutes: int | None = None
     age_rating: str | None = None
-    content_warnings: list[str] = Field(default_factory=list)
-    image_url: str | None = None
-    booking_url: str = ""
+    content_warnings: tuple[str, ...] = ()
     writer: str | None = None
     director: str | None = None
-    cast_members: list[str] = Field(default_factory=list)
-    genres: list[str] = Field(default_factory=list)  # tag slugs of type 'genre'
-    tags: list[str] = Field(default_factory=list)  # tag slugs of type 'tag'
-    performances: list[ScrapedPerformance] = Field(default_factory=list)
-    raw_data: dict = Field(default_factory=dict)
+    cast_members: tuple[str, ...] = ()
+    genres: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
+    performances: tuple[ScrapedPerformance, ...] = ()
+
+    raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class ScrapeRun(BaseModel):
+    theatre_slug: str
+    started_at: datetime
+    finished_at: datetime | None = None
+    status: ScrapeStatus = "success"
+    shows_found: int = 0
+    error: str | None = None

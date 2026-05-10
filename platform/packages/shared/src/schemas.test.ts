@@ -14,12 +14,29 @@ describe('SearchShowsInput', () => {
     expect(out.min_price).toBe(0);
   });
 
-  it('caps limit at 50', () => {
-    expect(() => SearchShowsInput.parse({ limit: 51 })).toThrow();
+  it('caps limit at 200', () => {
+    expect(() => SearchShowsInput.parse({ limit: 201 })).toThrow();
+    SearchShowsInput.parse({ limit: 200 });
   });
 
   it('rejects malformed dates', () => {
     expect(() => SearchShowsInput.parse({ date_from: '2026/09/12' })).toThrow();
+  });
+
+  it('accepts the web-UI filters: when, q, sort, dir, category, show_type', () => {
+    const out = SearchShowsInput.parse({
+      when: 'today',
+      q: 'machine',
+      sort: 'title',
+      dir: 'desc',
+      category: 'fringe',
+      show_type: 'comedy',
+    });
+    expect(out.when).toBe('today');
+    expect(out.sort).toBe('title');
+    expect(out.dir).toBe('desc');
+    expect(out.category).toBe('fringe');
+    expect(out.show_type).toBe('comedy');
   });
 });
 

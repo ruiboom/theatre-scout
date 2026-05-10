@@ -18,7 +18,10 @@ CREATE TABLE venues (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     slug                TEXT UNIQUE NOT NULL,
     name                TEXT NOT NULL,
+    -- Carries the same meaning as scout's `area` (e.g. "Islington").
     neighbourhood       TEXT NOT NULL,
+    -- First half of UK postcode, e.g. 'N1' / 'SE1'. Useful for area filters.
+    postcode_prefix     TEXT,
     nearest_tube        TEXT,
     description         TEXT NOT NULL DEFAULT '',
     capacity            INTEGER,
@@ -51,6 +54,11 @@ CREATE TABLE shows (
     -- price stored in pence for fidelity; API exposes as GBP integers
     price_min_pence     INTEGER,
     price_max_pence     INTEGER,
+    -- Run dates from the listings page. Most venues only expose a date range
+    -- rather than per-night times, so these are the canonical "what's playing"
+    -- columns when no individual `performances` rows exist for the show.
+    start_date          DATE,
+    end_date            DATE,
     duration_minutes    INTEGER,
     age_rating          TEXT,
     content_warnings    TEXT[] NOT NULL DEFAULT '{}',
@@ -71,13 +79,18 @@ CREATE TABLE shows (
     last_seen_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- An adapter re-running on the same show should hit this constraint
-    UNIQUE (venue_id, title)
+    -- Adapter re-runs upsert on this natural key. Mirrors scout's
+    -- `(theatre_slug, title, COALESCE(start_date, ''))` so a show with the same
+    -- title that returns to the same venue in a later season still counts as
+    -- a new row.
+    UNIQUE (venue_id, title, start_date)
 );
 
 CREATE INDEX shows_venue_idx     ON shows (venue_id);
 CREATE INDEX shows_search_idx    ON shows USING GIN (search_tsv);
 CREATE INDEX shows_title_trgm    ON shows USING GIN (title gin_trgm_ops);
+CREATE INDEX shows_dates_idx     ON shows (start_date, end_date);
+CREATE INDEX shows_first_seen_idx ON shows (first_seen_at DESC);
 
 -- ----------------------------------------------------------------------------
 -- performances

@@ -19,7 +19,6 @@ from scout.adapters.registry import register
 # Keeping them in `_JS_VENUES` cost ~3 min per scrape on retries — drop instead.
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
-    "yard",
 }
 
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
@@ -53,11 +52,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
         'a[href*="/whats-on/"]',
     ),
     ("other-palace", "https://theotherpalace.co.uk/whats-on/", "article"),
-    (
-        "yard",
-        "https://www.theyardtheatre.co.uk/whats-on",
-        'a[href*="/events/"]:not([href*="/tickets/"])',
-    ),
     ("underbelly-boulevard", "https://underbellyboulevard.com/tickets/", ".tile"),
     ("unicorn", "https://www.unicorntheatre.com/whats-on/", 'a[href*="/events/"]'),
     ("wiltons", "https://wiltons.org.uk/whats-on/", 'a[href*="/whats-on/"]'),

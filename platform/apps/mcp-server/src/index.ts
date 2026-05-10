@@ -55,15 +55,12 @@ app.all('/sse', (c) =>
   ListingsMCP.serveSSE('/sse').fetch(c.req.raw, c.env, c.executionCtx),
 );
 
-app.get('/openapi.json', (c) =>
-  c.json({
-    openapi: '3.1.0',
-    info: { title: 'Listings API', version: '0.0.1' },
-    servers: [{ url: c.env.API_BASE_URL }],
-    // TODO: derive paths from @platform/shared/schemas so the GPT and MCP
-    // server share one source of truth. Stub for now.
-    paths: {},
-  }),
-);
+// The canonical OpenAPI spec is hand-rolled on the Vercel side at /api/openapi
+// so it lives next to the API it describes. Forward to it from here so anyone
+// who hits this worker's /openapi.json still lands on the right doc.
+app.get('/openapi.json', (c) => {
+  const target = c.env.API_BASE_URL.replace(/\/v1\/?$/, '') + '/openapi';
+  return Response.redirect(target, 302);
+});
 
 export default app;

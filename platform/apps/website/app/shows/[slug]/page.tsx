@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getShow } from '@/lib/queries/shows';
 import { fmtDateRange, fmtPrice } from '@/lib/format';
+import { trackEvent, trackedExternalHref } from '@/lib/track';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export default async function ShowPage({
   const { slug } = await params;
   const show = await getShow({ slug });
   if (!show) notFound();
+  void trackEvent({ type: 'visit', path: `/shows/${slug}`, target: slug });
 
   return (
     <>
@@ -37,7 +39,7 @@ export default async function ShowPage({
             {show.booking_url && (
               <a
                 className="ts-btn ts-btn--primary"
-                href={show.booking_url}
+                href={trackedExternalHref(show.slug, show.booking_url)}
                 target="_blank"
                 rel="noopener noreferrer"
               >

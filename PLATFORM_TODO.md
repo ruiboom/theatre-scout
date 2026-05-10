@@ -40,15 +40,18 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 ## Phase C — known follow-ups (don't block on these)
 
 - [x] *(done — see Phase B)* Port `scout/` adapters into `platform/apps/scrapers/`
-- [ ] **Fix `open-air-theatre` adapter — inconsistent dates.** Same listing page produces some shows with `start_date`/`end_date` populated and others with both NULL. Symptom is a noisy programme view. The platform tolerates NULL-date shows now, but the underlying scout adapter (currently `("open-air-theatre", "https://openairtheatre.com/whats-on/", "article")` in `scout/adapters/bulk.py`) needs to be promoted to a bespoke parser that walks each card's date block reliably.
-- [ ] Add a "Refresh" button on the platform website that triggers a GitHub Actions `workflow_dispatch` (live `scout/` does this in-process; serverless deployment can't, so route it through Actions)
-- [ ] Live venue map widget on `/venues/[slug]` — port Leaflet block from `scout/web/templates/theatre.html`, source coordinates from `theatre-coords.yaml`
+- [x] **Fix `open-air-theatre` adapter — inconsistent dates.** Bespoke parser walks `article.ProductionTeaser` cards, lifts the year from each `Section-divide-title` heading, and parses `02 May` / `02 May – 06 June` ranges. 10/10 shows now have `start_date` (vs. 0/10 with the generic selector).
+- [x] **Live venue map widget on `/venues/[slug]`** — `<VenueMap>` client component lazy-loads Leaflet, OSM tiles, square ink marker. Coordinates come from PostGIS `venues.location`.
+- [x] **OpenAPI spec at `/api/openapi`** — hand-rolled OpenAPI 3.1 covering all six endpoints. CORS-open, cached 1h. Custom GPT setup: paste that URL as the action import. (MCP worker's `/openapi.json` now 302s to it.)
+- [x] **Admin dashboard at `/admin`** — single-password gate (`ADMIN_PASSWORD` env), HTTP-only cookie sessions, server-action login. Dashboard shows visit totals (24h / 7d / 30d), top searches, top venue-page visits, top outbound show clicks, scrape status, and a "Refresh data" button that dispatches the daily-scrape workflow via the GitHub API. **Requires two new env vars on Vercel: `ADMIN_PASSWORD` (any string) and `GITHUB_TOKEN` (fine-grained PAT with `Actions: read & write` on `ruiboom/theatre-scout`).**
+- [ ] **Refine the admin dashboard.** v0 lands the foundation (events table, server-side visit/search tracking, `/r` outbound redirect, dashboard, refresh trigger). Future work: per-day timeseries chart, geo aggregation by venue cluster, retention proxy via `ip_prefix`.
+- [ ] **User wish-lists** — let visitors mark shows they want to see; hand-roll a tiny "your list" surface with localStorage by default, optional email magic-link to persist server-side. Hooks into the `/shows` row design (a small ★ in the row gutter would fit cleanly).
+- [ ] **Standalone platform — drop the `scout/` dependency.** `platform/` now scrapes directly to Neon, but the repo still treats `scout/` as the live site. Eventually: extract `platform/` to its own repo (or just delete `scout/` once it's clear nothing references it). The remaining ties: `theatres.yaml` and `theatre-coords.yaml` at the repo root (can be moved into `platform/data/`), and the `scout/` site itself if it's still serving anyone (kill once Vercel parity is clear).
 - [ ] "New" filter chip on `/shows` should query `first_seen_at` directly (currently falls back to recent ordering)
 - [ ] Replace the rule-based recommender in `apps/website/lib/recommend.ts` with an Anthropic call once the tag taxonomy is rich enough
-- [ ] Flesh out the stubbed `/openapi.json` in `apps/mcp-server/src/index.ts` for the Custom GPT
 - [ ] Email integration (Beehiiv or Buttondown) — pull "new this week" via the API on a cron
 - [ ] Social bot (Buffer + Make.com) — post new listings, throttled
-- [ ] Admin CMS — password-protected `/admin` for manual entry and corrections
+- [ ] Admin CMS — manual show entry / corrections (different scope from the analytics dashboard above)
 - [x] Pick a real name — landed on **Theatre Scout** (May 2026). Display strings, MCP server name, scraper User-Agent and docs all updated. The shortlist + rationale is preserved in [`platform/docs/POSITIONING.md`](platform/docs/POSITIONING.md) for reference.
 
 ---

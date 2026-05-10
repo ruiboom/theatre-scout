@@ -150,6 +150,25 @@ CREATE INDEX scrape_runs_venue_idx       ON scrape_runs (venue_slug);
 CREATE INDEX scrape_runs_started_at_idx  ON scrape_runs (started_at DESC);
 
 -- ----------------------------------------------------------------------------
+-- events (analytics — visits, searches, outbound clicks)
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE events (
+    id           BIGSERIAL PRIMARY KEY,
+    type         TEXT NOT NULL CHECK (type IN ('visit', 'search', 'outbound')),
+    path         TEXT,
+    target       TEXT,
+    query        TEXT,
+    occurred_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ua           TEXT,
+    ip_prefix    TEXT
+);
+
+CREATE INDEX events_occurred_at_idx ON events (occurred_at DESC);
+CREATE INDEX events_type_idx        ON events (type);
+CREATE INDEX events_target_idx      ON events (target) WHERE target IS NOT NULL;
+
+-- ----------------------------------------------------------------------------
 -- updated_at trigger
 -- ----------------------------------------------------------------------------
 

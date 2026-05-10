@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { getVenue } from '@/lib/queries/venues';
 import type { VenueDetail } from '@platform/shared';
 import { fmtDateRange, fmtPrice, pad3 } from '@/lib/format';
+import { VenueMap } from '@/components/venue-map';
+import { trackEvent, trackedExternalHref } from '@/lib/track';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +15,7 @@ export default async function VenuePage({
   const { slug } = await params;
   const v = (await getVenue({ slug, include_shows: true })) as VenueDetail | null;
   if (!v) notFound();
+  void trackEvent({ type: 'visit', path: `/venues/${slug}`, target: slug });
 
   const shows = v.current_shows;
 
@@ -52,8 +55,11 @@ export default async function VenuePage({
           </div>
         </div>
         <div className="show-r">
-          {/* Map widget is captured as a Phase-2 follow-up in PLATFORM_TODO. */}
-          <div className="show-still" />
+          {v.lat != null && v.lng != null ? (
+            <VenueMap lat={v.lat} lng={v.lng} name={v.name} />
+          ) : (
+            <div className="show-still" />
+          )}
         </div>
       </section>
 
@@ -78,7 +84,7 @@ export default async function VenuePage({
                 <div className="row-body">
                   <a
                     className="row-title"
-                    href={s.booking_url}
+                    href={trackedExternalHref(s.slug, s.booking_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={s.description_short || undefined}

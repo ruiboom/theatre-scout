@@ -30,7 +30,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("kiln", "https://kilntheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("menier-chocolate-factory", "https://www.menierchocolatefactory.com/whats-on/", ".tile"),
     ("national-theatre", "https://www.nationaltheatre.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
-    ("open-air-theatre", "https://openairtheatre.com/whats-on/", "article"),
     ("orange-tree", "https://orangetreetheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("shakespeares-globe", "https://www.shakespearesglobe.com/whats-on/", "[class*=event-card]"),
     (

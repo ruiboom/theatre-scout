@@ -4,9 +4,11 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 # The McpAgent class needs Durable Object storage for per-session state.
+# `agents/mcp` looks for a binding named `MCP_OBJECT` by default — keep it as
+# such unless you call `MyAgent.serve(path, { binding: 'OTHER' })`.
 [durable_objects]
 bindings = [
-  { name = "MCP_AGENT", class_name = "ListingsMCP" }
+  { name = "MCP_OBJECT", class_name = "ListingsMCP" }
 ]
 
 [[migrations]]

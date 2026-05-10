@@ -7,7 +7,8 @@ import { registerTools } from './tools.js';
 
 interface Env {
   API_BASE_URL: string;
-  MCP_AGENT: DurableObjectNamespace;
+  // `agents/mcp` looks up the agent's Durable Object via this binding name.
+  MCP_OBJECT: DurableObjectNamespace;
 }
 
 /**

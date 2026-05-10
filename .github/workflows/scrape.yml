@@ -15,8 +15,10 @@ name: Daily scrape
 
 on:
   schedule:
-    # 04:00 UTC daily — overnight in London year-round (cron doesn't shift for DST)
-    - cron: "0 4 * * *"
+    # 05:00 UTC daily. Cron doesn't shift for DST so this lands at 05:00 GMT
+    # in winter / 06:00 BST in summer — fresh just before commute-time
+    # scrolling either way. Run takes ~17 min so data is current by 05:20.
+    - cron: "0 5 * * *"
   workflow_dispatch:
 
 permissions:

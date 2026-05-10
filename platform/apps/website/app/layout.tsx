@@ -58,7 +58,11 @@ export default async function RootLayout({
         <main className="page">{children}</main>
         <footer className="foot">
           <div>© Theatre Scout · London only · Daily index</div>
-          <div>Listings sourced from 70 venues</div>
+          <div>
+            <a href="/faq">FAQ</a>
+            <span className="bar-sep"> · </span>
+            <a href="/about">About</a>
+          </div>
         </footer>
       </body>
     </html>

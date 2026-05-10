@@ -32,12 +32,26 @@ export async function searchVenues(
   input: SearchVenuesInput,
 ): Promise<{ venues: VenueSummary[]; total: number }> {
   const limit = input.limit ?? 20;
+  const q = input.query?.trim() ?? '';
 
+  // Build a single haystack `name + neighbourhood + postcode` so a query like
+  // "Regents Park Open Air Theatre" (which doesn't substring-match either
+  // field on its own) resolves to "Open Air Theatre" via trigram similarity.
+  // We OR substring matches with pg_trgm's similarity above a permissive
+  // threshold, then rank by best similarity. Falls back to alphabetical when
+  // there's no query.
   const filters = sql`
     1 = 1
     ${
-      input.query
-        ? sql`AND v.name ILIKE ${'%' + input.query + '%'}`
+      q
+        ? sql`AND (
+            lower(v.name) LIKE ${'%' + q.toLowerCase() + '%'}
+            OR lower(v.neighbourhood) LIKE ${'%' + q.toLowerCase() + '%'}
+            OR similarity(
+                 lower(v.name || ' ' || v.neighbourhood || ' ' || COALESCE(v.postcode_prefix, '')),
+                 lower(${q})
+               ) > 0.18
+          )`
         : sql``
     }
     ${
@@ -56,11 +70,24 @@ export async function searchVenues(
     }
   `;
 
+  const orderBy = q
+    ? sql`
+        GREATEST(
+          similarity(lower(v.name), lower(${q})),
+          similarity(
+            lower(v.name || ' ' || v.neighbourhood || ' ' || COALESCE(v.postcode_prefix, '')),
+            lower(${q})
+          ),
+          CASE WHEN lower(v.name || ' ' || v.neighbourhood) LIKE ${'%' + q.toLowerCase() + '%'}
+               THEN 0.6 ELSE 0 END
+        ) DESC, v.name`
+    : sql`v.name`;
+
   const rows = (await sql<VenueRow[]>`
     SELECT v.id, v.slug, v.name, v.neighbourhood, v.nearest_tube, v.category
       FROM venues v
      WHERE ${filters}
-     ORDER BY v.name
+     ORDER BY ${orderBy}
      LIMIT ${limit}
   `) as VenueRow[];
 
@@ -115,7 +142,7 @@ export async function getVenue(opts: {
   slug?: string;
   include_shows?: boolean;
 }): Promise<VenueDetail | Venue | null> {
-  const rows = (await sql<VenueDetailRow[]>`
+  let rows = (await sql<VenueDetailRow[]>`
     SELECT v.id, v.slug, v.name, v.neighbourhood, v.nearest_tube, v.category,
            v.description, v.capacity, v.address, v.postcode_prefix,
            ST_Y(v.location::geometry) AS lat,
@@ -129,6 +156,32 @@ export async function getVenue(opts: {
      }
      LIMIT 1
   `) as VenueDetailRow[];
+
+  // Fuzzy fallback: if slug didn't resolve exactly, try the same fuzzy match
+  // searchVenues uses (over name + neighbourhood + postcode). Lets callers
+  // pass things like "regents-park-open-air-theatre" or "the-bush" and still
+  // land on the right venue, instead of a hard 404 forcing an extra round-trip.
+  if (rows.length === 0 && opts.slug && !opts.venue_id) {
+    const friendly = opts.slug.replace(/-/g, ' ');
+    rows = (await sql<VenueDetailRow[]>`
+      SELECT v.id, v.slug, v.name, v.neighbourhood, v.nearest_tube, v.category,
+             v.description, v.capacity, v.address, v.postcode_prefix,
+             ST_Y(v.location::geometry) AS lat,
+             ST_X(v.location::geometry) AS lng,
+             v.website
+        FROM venues v
+       WHERE similarity(
+               lower(v.name || ' ' || v.neighbourhood || ' ' || COALESCE(v.postcode_prefix, '')),
+               lower(${friendly})
+             ) > 0.25
+       ORDER BY similarity(
+                  lower(v.name || ' ' || v.neighbourhood || ' ' || COALESCE(v.postcode_prefix, '')),
+                  lower(${friendly})
+                ) DESC,
+                v.name
+       LIMIT 1
+    `) as VenueDetailRow[];
+  }
 
   if (rows.length === 0) return null;
   const r = rows[0]!;

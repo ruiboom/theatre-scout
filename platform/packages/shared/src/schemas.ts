@@ -25,7 +25,7 @@ const id = z.string().uuid();
 const NearLatLng = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  radius_km: z.number().positive().max(50).nullish().default(2),
+  radius_km: z.number().positive().max(50).optional().default(2),
 });
 
 // ---- search_shows ----
@@ -46,28 +46,28 @@ const VenueCategoryEnum = z.enum(['major', 'mid', 'fringe', 'outer']);
 const WhenChip = z.enum(['today', 'week', 'new']);
 
 export const SearchShowsInput = z.object({
-  date_from: isoDate.nullish(),
-  date_to: isoDate.nullish(),
-  neighbourhood: z.string().min(1).max(64).nullish(),
-  near: NearLatLng.nullish(),
-  max_price: z.number().nonnegative().nullish(),
-  min_price: z.number().nonnegative().nullish().default(0),
-  genres: z.array(z.string()).nullish(),
-  tags: z.array(z.string()).nullish(),
-  venue_ids: z.array(id).nullish(),
+  date_from: isoDate.optional(),
+  date_to: isoDate.optional(),
+  neighbourhood: z.string().min(1).max(64).optional(),
+  near: NearLatLng.optional(),
+  max_price: z.number().nonnegative().optional(),
+  min_price: z.number().nonnegative().optional().default(0),
+  genres: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  venue_ids: z.array(id).optional(),
   /** Filter by venue tier — surfaces the rails-view category filter. */
-  category: VenueCategoryEnum.nullish(),
+  category: VenueCategoryEnum.optional(),
   /** Filter by show type — heuristic-classified at scrape time. */
-  show_type: ShowTypeEnum.nullish(),
+  show_type: ShowTypeEnum.optional(),
   /** Web UI chip: "today" / "week" / "new". Resolves server-side to a date window. */
-  when: WhenChip.nullish(),
+  when: WhenChip.optional(),
   /** Free-text title search. */
-  q: z.string().min(1).max(200).nullish(),
+  q: z.string().min(1).max(200).optional(),
   /** Sort field for the list view. */
-  sort: z.enum(['start_date', 'end_date', 'title', 'venue']).nullish(),
+  sort: z.enum(['start_date', 'end_date', 'title', 'venue']).optional(),
   /** Sort direction. */
-  dir: z.enum(['asc', 'desc']).nullish(),
-  limit: z.number().int().min(1).max(200).nullish().default(20),
+  dir: z.enum(['asc', 'desc']).optional(),
+  limit: z.number().int().min(1).max(200).optional().default(20),
 });
 export type SearchShowsInput = z.infer<typeof SearchShowsInput>;
 
@@ -75,8 +75,8 @@ export type SearchShowsInput = z.infer<typeof SearchShowsInput>;
 
 export const GetShowInput = z
   .object({
-    show_id: id.nullish(),
-    slug: slug.nullish(),
+    show_id: id.optional(),
+    slug: slug.optional(),
   })
   .refine(
     (v) => !!v.show_id !== !!v.slug,
@@ -99,8 +99,8 @@ export const WhatsOnInput = z.object({
       z.string(),
       z.object({ lat: z.number(), lng: z.number() }),
     ])
-    .nullish(),
-  max_price: z.number().nonnegative().nullish(),
+    .optional(),
+  max_price: z.number().nonnegative().optional(),
 });
 export type WhatsOnInput = z.infer<typeof WhatsOnInput>;
 
@@ -110,25 +110,25 @@ export const RecommendShowsInput = z.object({
   vibe: z.string().min(2).max(500),
   constraints: z
     .object({
-      date_from: isoDate.nullish(),
-      date_to: isoDate.nullish(),
-      max_price: z.number().nonnegative().nullish(),
-      neighbourhood: z.string().nullish(),
-      near: NearLatLng.nullish(),
+      date_from: isoDate.optional(),
+      date_to: isoDate.optional(),
+      max_price: z.number().nonnegative().optional(),
+      neighbourhood: z.string().optional(),
+      near: NearLatLng.optional(),
     })
-    .nullish(),
-  exclude_genres: z.array(z.string()).nullish(),
-  limit: z.number().int().min(1).max(20).nullish().default(5),
+    .optional(),
+  exclude_genres: z.array(z.string()).optional(),
+  limit: z.number().int().min(1).max(20).optional().default(5),
 });
 export type RecommendShowsInput = z.infer<typeof RecommendShowsInput>;
 
 // ---- search_venues ----
 
 export const SearchVenuesInput = z.object({
-  query: z.string().min(1).max(120).nullish(),
-  neighbourhood: z.string().min(1).max(64).nullish(),
-  near: NearLatLng.nullish(),
-  limit: z.number().int().min(1).max(100).nullish().default(20),
+  query: z.string().min(1).max(120).optional(),
+  neighbourhood: z.string().min(1).max(64).optional(),
+  near: NearLatLng.optional(),
+  limit: z.number().int().min(1).max(100).optional().default(20),
 });
 export type SearchVenuesInput = z.infer<typeof SearchVenuesInput>;
 
@@ -136,9 +136,9 @@ export type SearchVenuesInput = z.infer<typeof SearchVenuesInput>;
 
 export const GetVenueInput = z
   .object({
-    venue_id: id.nullish(),
-    slug: slug.nullish(),
-    include_shows: z.boolean().nullish().default(true),
+    venue_id: id.optional(),
+    slug: slug.optional(),
+    include_shows: z.boolean().optional().default(true),
   })
   .refine(
     (v) => !!v.venue_id !== !!v.slug,

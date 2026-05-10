@@ -222,14 +222,15 @@ export async function searchShows(
      LIMIT ${limit}
   `) as ShowRow[];
 
-  const [{ count }] = await sql<{ count: number }[]>`
+  const countRows = await sql<{ count: number }[]>`
     SELECT COUNT(*)::int AS count
       FROM shows s
       JOIN venues v ON v.id = s.venue_id
      WHERE ${filters}
   `;
+  const total = countRows[0]?.count ?? 0;
 
-  return { shows: rows.map(rowToShow), total: count };
+  return { shows: rows.map(rowToShow), total };
 }
 
 /** Sort field → SQL ORDER BY clause. Mirrors scout's sort options. */

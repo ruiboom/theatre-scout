@@ -91,11 +91,12 @@ export async function searchVenues(
      LIMIT ${limit}
   `) as VenueRow[];
 
-  const [{ count }] = await sql<{ count: number }[]>`
+  const countRows = await sql<{ count: number }[]>`
     SELECT COUNT(*)::int AS count FROM venues v WHERE ${filters}
   `;
+  const total = countRows[0]?.count ?? 0;
 
-  return { venues: rows.map(rowToSummary), total: count };
+  return { venues: rows.map(rowToSummary), total };
 }
 
 /** Show-counts per venue, for the home-page index. */
@@ -190,7 +191,7 @@ export async function getVenue(opts: {
   // the date-overlap rule in searchShows so the count matches what the user sees.
   // Shows with no dates at all are included rather than dropped — see the
   // matching note in searchShows().
-  const [{ count: currentShowsCount }] = await sql<{ count: number }[]>`
+  const countRows = await sql<{ count: number }[]>`
     SELECT COUNT(DISTINCT s.id)::int AS count
       FROM shows s
      WHERE s.venue_id = ${r.id}
@@ -206,6 +207,7 @@ export async function getVenue(opts: {
          OR s.start_date IS NULL
        )
   `;
+  const currentShowsCount = countRows[0]?.count ?? 0;
 
   const venue: Venue = {
     id: r.id,

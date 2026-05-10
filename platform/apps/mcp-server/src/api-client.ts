@@ -49,7 +49,10 @@ export class ApiClient {
   async recommendShows(
     input: RecommendShowsInput,
   ): Promise<RecommendShowsResult> {
-    return this.post('/recommend', input);
+    // Strip nulls recursively. The MCP tool schemas accept null for unspecified
+    // optionals (Claude's convention) but the Internal API's shared zod schemas
+    // use plain `.optional()` and would reject null. Keep the wire format clean.
+    return this.post('/recommend', stripNulls(input));
   }
 
   async searchVenues(input: SearchVenuesInput): Promise<SearchVenuesResult> {
@@ -114,4 +117,25 @@ function flatten(o: object): Record<string, unknown> {
     if (v != null) out[k] = v;
   }
   return out;
+}
+
+/**
+ * Recursive null-stripper for POST bodies. The MCP tool schemas accept null
+ * for unspecified optionals (matches Claude's convention) but the website's
+ * shared schemas use plain `.optional()` and would 400 on null. Strip
+ * everywhere before serialising.
+ */
+function stripNulls<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(stripNulls) as unknown as T;
+  }
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v === null || v === undefined) continue;
+      out[k] = stripNulls(v);
+    }
+    return out as T;
+  }
+  return value;
 }

@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server';
-import { ZodError, type ZodSchema } from 'zod';
+import { ZodError, z } from 'zod';
 import type { ApiError } from '@platform/shared';
 
 /**
  * Parse `Request` body or query params with a zod schema and return either
  * the parsed value or a 400 NextResponse. Keeps every route handler down to
  * about three lines of validation.
+ *
+ * Generic is the schema (not its output type) so `z.infer<S>` pulls the
+ * post-default OUTPUT type — otherwise zod's variance lets TS widen T to the
+ * INPUT type and field-level defaults produce ` | undefined` on the parsed
+ * result, which then fails to assign to a function param typed against the
+ * same `z.infer<>` (Vercel's strict build catches this).
  */
-export async function parseInput<T>(
-  schema: ZodSchema<T>,
+export async function parseInput<S extends z.ZodTypeAny>(
+  schema: S,
   source: Record<string, unknown>,
-): Promise<{ ok: true; data: T } | { ok: false; response: NextResponse }> {
+): Promise<
+  | { ok: true; data: z.infer<S> }
+  | { ok: false; response: NextResponse }
+> {
   try {
     return { ok: true, data: schema.parse(source) };
   } catch (err) {

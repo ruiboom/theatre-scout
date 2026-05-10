@@ -38,6 +38,8 @@ def test_urls_are_unique_and_canonical(shows) -> None:  # type: ignore[no-untype
 
 def test_iso_dates_parsed(shows) -> None:  # type: ignore[no-untyped-def]
     by_url = {str(s.url): s for s in shows}
-    stickin = by_url.get("https://www.etceteratheatrecamden.com/events/stickin-boy-la8zx-l263p-4z3f9-ejyzl-8g4hl")
+    stickin = by_url.get(
+        "https://www.etceteratheatrecamden.com/events/stickin-boy-la8zx-l263p-4z3f9-ejyzl-8g4hl"
+    )
     assert stickin is not None
     assert stickin.start_date == date(2026, 5, 10)

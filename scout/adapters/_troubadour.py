@@ -92,7 +92,7 @@ def _extract_bg_image(card: Selector, base_url: str) -> str | None:
         m = _BG_IMG_RE.search(style)
         if m:
             url = m.group(1).strip().strip("'\"")
-            return urllib.parse.urljoin(base_url, url)
+            return str(urllib.parse.urljoin(base_url, url))
     return None
 
 

@@ -6,10 +6,6 @@ inspecting a saved fixture; bespoke parsing lives in its own module.
 Slugs in `_JS_VENUES` route through the stealth (browser-rendered) fetch path
 because the listing page is either JavaScript-rendered or the venue blocks
 plain HTTP requests.
-
-This module starts small. As scout/'s adapters are ported across, add their
-entries here (or graduate to a bespoke module). See scout/adapters/bulk.py for
-the full reference.
 """
 
 from __future__ import annotations
@@ -18,13 +14,63 @@ from ._generic import GenericAdapter
 from .registry import register
 
 # Venues that need a real browser to render content (or to defeat anti-bot blocking).
-_JS_VENUES: set[str] = set()
+# `hen-and-chickens` and `tabard` were initially added here but the stealth
+# browser still couldn't reach them (DNS / cert issues, repeated timeouts).
+# Keeping them in `_JS_VENUES` cost ~3 min per scrape on retries — drop instead.
+_JS_VENUES: set[str] = {
+    "seven-dials-playhouse",
+}
 
-# (slug, url, selector). slug == key in theatres.yaml.
+# (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
 _ENTRIES: list[tuple[str, str, str]] = [
-    # Seed with a couple of representative entries; expand when porting from scout.
-    # ("bridge-theatre", "https://www.bridgetheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
-    # ("bush-theatre",   "https://www.bushtheatre.co.uk/whats-on/",   'a[href*="/event/"]'),
+    # --- major ---
+    ("bridge-theatre", "https://www.bridgetheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    ("bush", "https://www.bushtheatre.co.uk/whats-on/", 'a[href*="/event/"]'),
+    ("hampstead", "https://www.hampsteadtheatre.com/whats-on/main-stage/", 'a[href*="/whats-on/"]'),
+    ("kiln", "https://kilntheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
+    ("menier-chocolate-factory", "https://www.menierchocolatefactory.com/whats-on/", ".tile"),
+    ("national-theatre", "https://www.nationaltheatre.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    ("open-air-theatre", "https://openairtheatre.com/whats-on/", "article"),
+    ("orange-tree", "https://orangetreetheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    ("shakespeares-globe", "https://www.shakespearesglobe.com/whats-on/", "[class*=event-card]"),
+    (
+        "theatre-royal-stratford-east",
+        "https://stratfordeast.com/whats-on/",
+        'a[href*="/whats-on/"]',
+    ),
+    ("young-vic", "https://www.youngvic.org/whats-on", 'a[href*="/whats-on/"]'),
+    # --- mid ---
+    ("barbican", "https://www.barbican.org.uk/whats-on", 'a[href*="/whats-on/"]'),
+    ("brixton-house", "https://brixtonhouse.co.uk/whats-on/", "li[class*=show]"),
+    ("coronet", "https://www.thecoronettheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
+    ("gate", "https://www.gatetheatre.co.uk/our-work/", 'a[href*="/our-work/"]'),
+    ("new-diorama", "https://newdiorama.com/whats-on/", 'a[href*="/whats-on/"]'),
+    ("roundhouse", "https://www.roundhouse.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    (
+        "seven-dials-playhouse",
+        "https://www.sevendialsplayhouse.co.uk/whats-on",
+        'a[href*="/whats-on/"]',
+    ),
+    ("other-palace", "https://theotherpalace.co.uk/whats-on/", "article"),
+    ("underbelly-boulevard", "https://underbellyboulevard.com/tickets/", ".tile"),
+    ("unicorn", "https://www.unicorntheatre.com/whats-on/", 'a[href*="/events/"]'),
+    ("wiltons", "https://wiltons.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    # --- fringe ---
+    ("camden-peoples", "https://cptheatre.co.uk/whats-on", ".event"),
+    ("cockpit", "https://www.thecockpit.org.uk/", 'a[href*="/show/"]'),
+    ("finborough", "https://www.finboroughtheatre.co.uk/productions", 'a[href*="/productions/"]'),
+    ("hen-and-chickens", "https://henandchickens.com/whats-on/", 'a[href*="/whats-on/"]'),
+    ("jermyn-street", "https://www.jermynstreettheatre.co.uk/now-next/", 'a[href*="/show/"]'),
+    ("kings-head", "https://kingsheadtheatre.com/whats-on", 'a[href*="/whats-on/"]'),
+    ("southwark-playhouse", "https://southwarkplayhouse.co.uk/", 'a[href*="/productions/"]'),
+    ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
+    # --- outer ---
+    ("alexandra-palace", "https://www.alexandrapalace.com/whats-on/", 'a[href*="/whats-on/"]'),
+    ("greenwich", "https://greenwichtheatre.org.uk/whats-on/", 'a[href*="/events/"]'),
+    ("polka", "https://polkatheatre.com/whats-on/", 'a[href*="/event/"]'),
+    ("queens-hornchurch", "https://queens-theatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
+    ("rose-kingston", "https://www.rosetheatre.org/whats-on", 'a[href*="/whats-on/"]'),
 ]
 
 

@@ -68,7 +68,12 @@ def scrape_all(
     typer.echo(f"\nDone. {success} success, {len(failed)} failed.")
     for r in failed:
         typer.echo(f"  ✗ {r.theatre_slug}: {r.error}")
-    if failed:
+    # Exit semantics tuned for cron use: a few flaky venues (DNS, anti-bot) is
+    # expected and shouldn't fail the job. Only exit 1 if the run was
+    # catastrophic — every adapter failed (likely a systemic issue: network
+    # down, Postgres unreachable, browser missing). Per-venue failures live
+    # in the scrape_runs table for inspection.
+    if runs and not success:
         sys.exit(1)
 
 

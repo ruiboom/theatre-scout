@@ -1,9 +1,14 @@
 name: Daily scrape
 
 # Daily refresh of the platform DB:
-#   1. Run scout's scraper into a fresh SQLite under `data/`.
-#   2. ETL that SQLite into the platform's Postgres (Neon).
+#   1. Sync venues from theatres.yaml (idempotent — schema changes only).
+#   2. Run platform's own scrapers across all 68 adapters, writing direct to
+#      Neon. 3-phase pipeline (serial listings → parallel enrich → writes).
 #   3. Smoke-test the live API to confirm the count is sensible.
+#
+# This workflow used to bridge through scout's SQLite via the ETL script;
+# that's gone now — every adapter has been ported into platform/apps/scrapers
+# and registers itself on `load_all()`.
 #
 # Trigger manually from the Actions tab via "Run workflow" the first time so
 # you can watch the log; the cron takes over after that.
@@ -24,9 +29,16 @@ concurrency:
 
 jobs:
   scrape:
-    name: Scrape + ETL → Neon
+    name: Scrape → Neon
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        working-directory: platform/apps/scrapers
+
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 
     steps:
       - name: Checkout
@@ -36,47 +48,37 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
+          cache-dependency-glob: platform/apps/scrapers/uv.lock
 
-      # Patchright (Chromium) is needed for the ~7 JS-rendered venues. Cache
-      # it across runs so we only pay the ~250 MB download once a week-ish.
+      # Patchright (Chromium) is needed for the ~8 JS-rendered venues. Cache
+      # across runs so we only pay the ~250 MB download once a week-ish.
       - name: Cache Playwright/Patchright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-v1
 
-      - name: Install scout deps
+      - name: Install scrapers deps
         run: uv sync
 
       - name: Install scrapling browser
         run: uv run scrapling install
 
-      - name: Scrape all venues into scout SQLite
+      - name: Sync venues from theatres.yaml
+        # Idempotent. Picks up venue metadata changes (postcode, neighbourhood,
+        # category, website) without touching shows.
+        run: uv run scrape sync-venues ../../../theatres.yaml
+
+      - name: Scrape all venues into Neon
         # `--enrich` fetches each show's detail page; `--replace` wipes prior
         # rows per venue on success; `--workers 16` fans enrichment across
-        # hosts. The orchestrator records a failed scrape_run for any adapter
-        # that raises and moves on, so a few broken venues won't fail the job.
-        run: |
-          mkdir -p data
-          uv run scout scrape --enrich --replace --workers 16
-
-      - name: Sync platform scrapers env (psycopg, pyyaml)
-        working-directory: platform/apps/scrapers
-        run: uv sync --extra dev
-
-      - name: ETL scout SQLite → Neon
-        working-directory: platform/apps/scrapers
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-        run: |
-          uv run python ../../scripts/etl_from_scout.py \
-            --sqlite ../../../data/theatre-scout.db \
-            --theatres ../../../theatres.yaml \
-            --coords ../../../theatre-coords.yaml \
-            --postgres "$DATABASE_URL"
+        # hosts. Failed adapters are recorded as `failed` scrape_runs and the
+        # job continues — a few broken venues won't sink the whole run.
+        run: uv run scrape all --enrich --replace --workers 16
 
       - name: Smoke-test live API
         if: ${{ vars.SITE_BASE_URL != '' }}
+        working-directory: ${{ github.workspace }}
         run: |
           total=$(curl -fsS "${{ vars.SITE_BASE_URL }}/api/v1/shows?limit=1" \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['total'])")

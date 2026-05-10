@@ -47,24 +47,27 @@ class ChurchillAdapter(BaseAdapter):
             url = urllib.parse.urljoin(base_url, href)
             if url in seen:
                 continue
-            title_el = a.css("h2").first
+            # Featured cards use h2; carousel cards use h3. Take whichever appears.
+            title_el = a.css("h2, h3").first
             if title_el is None:
                 continue
             title = clean_text(title_el.get_all_text(separator=" ", strip=True))
-            if not title or title.lower() in {"just added", "on sale soon"}:
+            if not title or title.lower() in {"just added", "on sale soon", "just announced"}:
                 continue
 
-            # Walk the card's <p> tags: first is description, second is the
-            # date range.
-            ps = a.css("p")
+            # Date can be in a <p> (featured cards) or <span> (carousel cards).
             description = ""
             date_text = ""
-            for i, p in enumerate(ps):
-                txt = clean_text(p.get_all_text(separator=" ", strip=True))
-                if i == 0:
+            for el in a.css("p, span"):
+                txt = clean_text(el.get_all_text(separator=" ", strip=True))
+                if not txt or txt == title:
+                    continue
+                if _looks_like_date(txt):
+                    if not date_text:
+                        date_text = txt
+                elif not description and len(txt) > 20:
                     description = txt
-                elif _looks_like_date(txt):
-                    date_text = txt
+                if description and date_text:
                     break
             start, end = parse_date_range(date_text)
 

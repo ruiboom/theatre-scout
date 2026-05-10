@@ -1,0 +1,18 @@
+{
+  "name": "@platform/db",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "migrate": "node scripts/migrate.mjs",
+    "reset": "node scripts/reset.mjs",
+    "seed": "node scripts/seed.mjs",
+    "lint": "echo 'no lint configured'",
+    "typecheck": "echo 'sql only'",
+    "test": "echo 'integration tests live in website'",
+    "build": "echo 'sql only'",
+    "clean": "echo 'no clean'"
+  },
+  "dependencies": {
+    "postgres": "^3.4.5"
+  }
+}

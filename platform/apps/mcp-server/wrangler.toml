@@ -1,0 +1,21 @@
+name = "platform-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# The McpAgent class needs Durable Object storage for per-session state.
+[durable_objects]
+bindings = [
+  { name = "MCP_AGENT", class_name = "ListingsMCP" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ListingsMCP"]
+
+[vars]
+# Override with: wrangler secret put / `[env.production].vars`
+API_BASE_URL = "http://localhost:3000/api/v1"
+
+[observability]
+enabled = true

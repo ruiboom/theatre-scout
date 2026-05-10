@@ -1,0 +1,87 @@
+name: Daily scrape
+
+# Daily refresh of the platform DB:
+#   1. Run scout's scraper into a fresh SQLite under `data/`.
+#   2. ETL that SQLite into the platform's Postgres (Neon).
+#   3. Smoke-test the live API to confirm the count is sensible.
+#
+# Trigger manually from the Actions tab via "Run workflow" the first time so
+# you can watch the log; the cron takes over after that.
+
+on:
+  schedule:
+    # 04:00 UTC daily — overnight in London year-round (cron doesn't shift for DST)
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Don't let two scrape runs overlap; let an in-flight one finish.
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    name: Scrape + ETL → Neon
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      # Patchright (Chromium) is needed for the ~7 JS-rendered venues. Cache
+      # it across runs so we only pay the ~250 MB download once a week-ish.
+      - name: Cache Playwright/Patchright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-v1
+
+      - name: Install scout deps
+        run: uv sync
+
+      - name: Install scrapling browser
+        run: uv run scrapling install
+
+      - name: Scrape all venues into scout SQLite
+        # `--enrich` fetches each show's detail page; `--replace` wipes prior
+        # rows per venue on success; `--workers 16` fans enrichment across
+        # hosts. The orchestrator records a failed scrape_run for any adapter
+        # that raises and moves on, so a few broken venues won't fail the job.
+        run: |
+          mkdir -p data
+          uv run scout scrape --enrich --replace --workers 16
+
+      - name: Sync platform scrapers env (psycopg, pyyaml)
+        working-directory: platform/apps/scrapers
+        run: uv sync --extra dev
+
+      - name: ETL scout SQLite → Neon
+        working-directory: platform/apps/scrapers
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          uv run python ../../scripts/etl_from_scout.py \
+            --sqlite ../../../data/theatre-scout.db \
+            --theatres ../../../theatres.yaml \
+            --coords ../../../theatre-coords.yaml \
+            --postgres "$DATABASE_URL"
+
+      - name: Smoke-test live API
+        if: ${{ vars.SITE_BASE_URL != '' }}
+        run: |
+          total=$(curl -fsS "${{ vars.SITE_BASE_URL }}/api/v1/shows?limit=1" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['total'])")
+          echo "Live API reports $total upcoming shows"
+          [ "$total" -gt 100 ] || {
+            echo "::error::Suspiciously low total ($total) — investigate"
+            exit 1
+          }

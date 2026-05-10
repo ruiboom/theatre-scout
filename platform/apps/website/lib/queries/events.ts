@@ -58,11 +58,15 @@ export async function topVenueClicks(
   days: number,
   limit = 10,
 ): Promise<Array<{ slug: string; name: string; count: number }>> {
+  // Note: every outer-query reference is qualified (`e.slug`, `v.name`, etc).
+  // Without that Postgres rejects the query as 42702 "column reference 'slug'
+  // is ambiguous" — both the derived subquery `e` and `venues v` have a
+  // `slug` column.
   const rows = await sql<{ slug: string; name: string; count: number }[]>`
     SELECT
-      slug,
-      COALESCE(v.name, slug) AS name,
-      count
+      e.slug,
+      COALESCE(v.name, e.slug) AS name,
+      e.count
     FROM (
       SELECT
         substring(path FROM '^/venues/([^/?#]+)') AS slug,
@@ -75,7 +79,7 @@ export async function topVenueClicks(
     ) e
     LEFT JOIN venues v ON v.slug = e.slug
     WHERE e.slug IS NOT NULL
-    ORDER BY count DESC, slug ASC
+    ORDER BY e.count DESC, e.slug ASC
     LIMIT ${limit}
   `;
   return rows;

@@ -92,6 +92,7 @@ export async function listVenuesWithCounts(): Promise<
              s.start_date IS NOT NULL
              AND (s.end_date IS NULL OR s.end_date >= CURRENT_DATE)
            )
+           OR s.start_date IS NULL
          GROUP BY venue_id
       ) c ON c.venue_id = v.id
      ORDER BY LOWER(REGEXP_REPLACE(v.name, '^The +', '', 'i'))
@@ -134,6 +135,8 @@ export async function getVenue(opts: {
 
   // Count shows that are running today or have a future performance, mirroring
   // the date-overlap rule in searchShows so the count matches what the user sees.
+  // Shows with no dates at all are included rather than dropped — see the
+  // matching note in searchShows().
   const [{ count: currentShowsCount }] = await sql<{ count: number }[]>`
     SELECT COUNT(DISTINCT s.id)::int AS count
       FROM shows s
@@ -147,6 +150,7 @@ export async function getVenue(opts: {
            s.start_date IS NOT NULL
            AND (s.end_date IS NULL OR s.end_date >= CURRENT_DATE)
          )
+         OR s.start_date IS NULL
        )
   `;
 

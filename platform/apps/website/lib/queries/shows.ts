@@ -142,6 +142,11 @@ export async function searchShows(
 
   // Prefer per-show performances when present; fall back to start_date/end_date
   // range overlap. The two sources are complementary, never contradictory.
+  //
+  // A show with no dates at all (scout adapters that fail to extract them)
+  // gets included rather than filtered — better to surface a show with
+  // missing timing than to hide it. A "When?" gap is more useful than a
+  // false negative.
   const dateOverlap = sql`
     (
       EXISTS (
@@ -154,6 +159,7 @@ export async function searchShows(
         AND s.start_date <= ${dateTo}::date
         AND (s.end_date IS NULL OR s.end_date >= ${dateFrom}::date)
       )
+      OR s.start_date IS NULL
     )
   `;
 

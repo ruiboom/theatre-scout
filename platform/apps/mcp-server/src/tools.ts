@@ -19,7 +19,7 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const NearLatLng = z.object({
   lat: z.number(),
   lng: z.number(),
-  radius_km: z.number().optional().default(2),
+  radius_km: z.number().nullish().default(2),
 });
 
 export function registerTools(server: McpServer, api: ApiClient) {
@@ -33,16 +33,16 @@ Defaults: today through next week, 20 results, sorted by next performance date.
 Returns { shows: Show[], total }. Empty result is { shows: [], total: 0 } —
 never null.`,
     {
-      date_from: isoDate.optional(),
-      date_to: isoDate.optional(),
-      neighbourhood: z.string().optional(),
-      near: NearLatLng.optional(),
-      max_price: z.number().nonnegative().optional(),
-      min_price: z.number().nonnegative().optional(),
-      genres: z.array(z.string()).optional(),
-      tags: z.array(z.string()).optional(),
-      venue_ids: z.array(z.string()).optional(),
-      limit: z.number().int().min(1).max(50).optional(),
+      date_from: isoDate.nullish(),
+      date_to: isoDate.nullish(),
+      neighbourhood: z.string().nullish(),
+      near: NearLatLng.nullish(),
+      max_price: z.number().nonnegative().nullish(),
+      min_price: z.number().nonnegative().nullish(),
+      genres: z.array(z.string()).nullish(),
+      tags: z.array(z.string()).nullish(),
+      venue_ids: z.array(z.string()).nullish(),
+      limit: z.number().int().min(1).max(50).nullish(),
     },
     async (args) => json(await api.searchShows(args)),
   );
@@ -57,8 +57,8 @@ show by name.
 
 Pass exactly one of show_id (UUID) or slug.`,
     {
-      show_id: z.string().uuid().optional(),
-      slug: z.string().optional(),
+      show_id: z.string().uuid().nullish(),
+      slug: z.string().nullish(),
     },
     async (args) => {
       if (!args.show_id && !args.slug) {
@@ -88,8 +88,8 @@ September...").`,
       ]),
       near: z
         .union([z.string(), z.object({ lat: z.number(), lng: z.number() })])
-        .optional(),
-      max_price: z.number().nonnegative().optional(),
+        .nullish(),
+      max_price: z.number().nonnegative().nullish(),
     },
     async (args) => json(await api.whatsOn(args)),
   );
@@ -108,15 +108,15 @@ sentence rationale. Present them as curated picks, not a search result.`,
       vibe: z.string().min(2),
       constraints: z
         .object({
-          date_from: isoDate.optional(),
-          date_to: isoDate.optional(),
-          max_price: z.number().nonnegative().optional(),
-          neighbourhood: z.string().optional(),
-          near: NearLatLng.optional(),
+          date_from: isoDate.nullish(),
+          date_to: isoDate.nullish(),
+          max_price: z.number().nonnegative().nullish(),
+          neighbourhood: z.string().nullish(),
+          near: NearLatLng.nullish(),
         })
-        .optional(),
-      exclude_genres: z.array(z.string()).optional(),
-      limit: z.number().int().min(1).max(20).optional(),
+        .nullish(),
+      exclude_genres: z.array(z.string()).nullish(),
+      limit: z.number().int().min(1).max(20).nullish(),
     },
     async (args) => json(await api.recommendShows(args)),
   );
@@ -128,10 +128,10 @@ sentence rationale. Present them as curated picks, not a search result.`,
 venues are in Camden?", "where's the Bush Theatre?", or "pub theatres in
 Stoke Newington".`,
     {
-      query: z.string().optional(),
-      neighbourhood: z.string().optional(),
-      near: NearLatLng.optional(),
-      limit: z.number().int().min(1).max(100).optional(),
+      query: z.string().nullish(),
+      neighbourhood: z.string().nullish(),
+      near: NearLatLng.nullish(),
+      limit: z.number().int().min(1).max(100).nullish(),
     },
     async (args) => json(await api.searchVenues(args)),
   );
@@ -145,9 +145,9 @@ user wants to know about a specific venue or asks "what's on at [venue]?".
 Pass exactly one of venue_id (UUID) or slug. Set include_shows: false if you
 only need venue metadata.`,
     {
-      venue_id: z.string().uuid().optional(),
-      slug: z.string().optional(),
-      include_shows: z.boolean().optional(),
+      venue_id: z.string().uuid().nullish(),
+      slug: z.string().nullish(),
+      include_shows: z.boolean().nullish(),
     },
     async (args) => {
       if (!args.venue_id && !args.slug) {

@@ -52,6 +52,19 @@ export function paramsFromUrl(url: URL): Record<string, unknown> {
 function coerce(v: string): unknown {
   if (v === 'true') return true;
   if (v === 'false') return false;
+  // Object/array literal — the MCP api-client serialises structured params
+  // (e.g. `near: {lat, lng, radius_km}`) as JSON. Decode it back so zod sees
+  // the original shape rather than a string.
+  if (
+    (v.startsWith('{') && v.endsWith('}')) ||
+    (v.startsWith('[') && v.endsWith(']'))
+  ) {
+    try {
+      return JSON.parse(v);
+    } catch {
+      /* fall through to bare-string return */
+    }
+  }
   if (v !== '' && !Number.isNaN(Number(v))) return Number(v);
   return v;
 }

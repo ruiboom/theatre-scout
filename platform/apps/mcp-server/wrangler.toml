@@ -16,8 +16,10 @@ tag = "v1"
 new_sqlite_classes = ["ListingsMCP"]
 
 [vars]
-# Override with: wrangler secret put / `[env.production].vars`
-API_BASE_URL = "http://localhost:3000/api/v1"
+# Default URL the worker calls. Override with `wrangler secret put API_BASE_URL`
+# (recommended) or `[env.<name>].vars`. Pointed at the live Vercel deployment
+# so a fresh deploy is functional even before secrets are set.
+API_BASE_URL = "https://theatre-scout-zunz.vercel.app/api/v1"
 
 [observability]
 enabled = true

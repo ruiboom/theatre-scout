@@ -24,17 +24,17 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 
 ## Phase B — deploy online
 
-- [ ] Push the repo to GitHub (this branch + main)
-- [ ] Create a Neon project (London region), enable PostGIS, copy pooled + direct URLs
-- [ ] Apply `schema.sql` (and optionally `seed.sql`) to the hosted DB
-- [ ] Import to Vercel: root directory `platform/apps/website`, env var `DATABASE_URL = <pooled>`
-- [ ] Verify the live site + `/api/v1/whats-on` from a browser
-- [ ] `wrangler login`, set `API_BASE_URL` secret to the Vercel URL, `wrangler deploy` the MCP server
-- [ ] Confirm `/health` and `/mcp` on the deployed Workers URL
-- [ ] Add `.github/workflows/scrape.yml` cron + `DATABASE_URL_DIRECT` repo secret
-- [ ] Trigger the workflow once manually, confirm rows land in Neon
+- [x] Push the repo to GitHub (`ruiboom/theatre-scout`, private)
+- [x] Create a Neon project (London region), enable PostGIS, copy pooled + direct URLs
+- [x] Apply `schema.sql` to Neon (current schema with `0002_align_with_scout` columns)
+- [x] Import to Vercel — root directory `platform/apps/website`, `DATABASE_URL` = pooled URL → live at <https://theatre-scout-zunz.vercel.app>
+- [x] Verify the live site + `/api/v1/whats-on` from a browser
+- [x] `wrangler login`, set `API_BASE_URL` secret to the Vercel URL, `wrangler deploy` the MCP server → live at <https://platform-mcp-server.boomclick.workers.dev/mcp>
+- [x] Confirm `/health` and the MCP `initialize` handshake on the deployed Workers URL
+- [x] Add `.github/workflows/scrape.yml` daily cron (04:00 UTC) + `NEON_DATABASE_URL` secret + `SITE_BASE_URL` variable for the smoke test
+- [x] Trigger the workflow once manually — first run lands ~700 shows on Neon, smoke-test passes
+- [x] Repoint Claude Desktop config to `https://platform-mcp-server.boomclick.workers.dev/mcp`
 - [ ] (Optional) Custom domain on Vercel + a `mcp.…` subdomain on Cloudflare
-- [ ] Repoint Claude Desktop / Claude.ai to the deployed MCP URL
 
 ## Phase C — known follow-ups (don't block on these)
 

@@ -10,17 +10,17 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 
 ## Phase A — run the platform locally
 
-- [ ] Install prerequisites: Node 20, pnpm, uv, Docker Desktop
-- [ ] `pnpm install` in `platform/`
-- [ ] Boot Postgres + PostGIS via Docker (`postgis/postgis:16-3.4`)
-- [ ] Apply `packages/db/schema.sql` and `scripts/seed.sql` to the local DB
-- [ ] `cp .env.example .env`
-- [ ] `pnpm --filter website dev` → homepage renders 6 seeded shows on :3000
-- [ ] Smoke-test all six API endpoints (`/api/v1/shows`, `/whats-on`, `/recommend`, etc.)
-- [ ] Wire up Python scrapers (`uv sync`, run `scrape venue example`) — verify the writer reaches Postgres
-- [ ] `pnpm --filter mcp-server dev` → `:8787/health` returns ok
-- [ ] Connect Claude Desktop via `mcp-remote`, confirm the six tools are callable
-- [ ] `pnpm test` and `uv run pytest` both green
+- [x] Install prerequisites: Node 20, pnpm, uv, Docker (or OrbStack)
+- [x] `pnpm install` in `platform/`
+- [x] Boot Postgres + PostGIS via Docker (`postgis/postgis:16-3.4`, port 5433 if 5432 is taken)
+- [x] Apply `packages/db/schema.sql` and `scripts/seed.sql` to the local DB
+- [x] `cp .env.example .env` and copy to `apps/website/.env.local`
+- [x] `pnpm --filter website dev` → homepage renders 6 seeded shows on :3000
+- [x] Smoke-test all six API endpoints (`/api/v1/shows`, `/whats-on`, `/recommend`, etc.)
+- [x] Wire up Python scrapers (`uv sync --extra dev`, run `scrape venue example`) — `scrape_runs` row written
+- [x] `pnpm --filter mcp-server dev` → `:8787/health` returns ok; initialize + tools/list + tools/call all green
+- [x] `pnpm test` (21 tests) and `uv run pytest` (15 tests) both green
+- [ ] Connect Claude Desktop via `mcp-remote`, confirm the six tools are callable *(local-machine step — see [`platform/SETUP.md`](platform/SETUP.md) §9)*
 
 ## Phase B — deploy online
 

@@ -123,6 +123,9 @@ def home(
     by_cat: dict[str, list] = {"major": [], "mid": [], "fringe": [], "outer": []}  # type: ignore[type-arg]
     for t in theatres:
         by_cat[t.category].append(t)
+    # Sort venue names case-insensitively, ignoring a leading "The " so
+    # "The Yard" lands under Y rather than T.
+    sorted_theatres = sorted(theatres, key=lambda t: t.name.lower().removeprefix("the ").strip())
     show_counts = Counter(s.theatre_slug for s in upcoming)
     return templates.TemplateResponse(
         request,
@@ -130,6 +133,7 @@ def home(
         {
             **_layout_ctx(conn),
             "by_cat": by_cat,
+            "theatres": sorted_theatres,
             "show_counts": show_counts,
             "total_shows": len(upcoming),
             "total_venues": len(theatres),

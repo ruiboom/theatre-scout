@@ -2,13 +2,6 @@
 {% block title %}Theatres · Theatre Scout{% endblock %}
 {% block content %}
 
-{% set categories = [
-    ("major", "Major producing houses"),
-    ("mid",   "Mid-sized & specialist"),
-    ("fringe","Fringe & pub theatres"),
-    ("outer", "Outer London receiving houses"),
-] %}
-
 <section class="hero">
     <div class="hero-l">
         <div class="ts-meta">London · An index of every show currently in town</div>
@@ -42,28 +35,25 @@
     </div>
 </section>
 
-{% for cat, label in categories %}
-    {% set theatres = by_cat[cat] %}
-    <section class="rail">
-        <div class="rail-head">
-            <div class="rail-idx">{{ '%02d' % (loop.index) }}</div>
-            <h2 class="rail-title">{{ label }} <small>{{ theatres | length }} venues</small></h2>
-            <a class="rail-count" href="/shows?cat={{ cat }}">View shows ›</a>
-        </div>
-        <ul class="row-list">
-            {% for t in theatres %}
-                <a class="row row-theatre" href="/theatres/{{ t.slug }}">
-                    <div class="row-idx">{{ '%03d' % loop.index }}</div>
-                    <div class="row-body">
-                        <div class="row-title">{{ t.name }}</div>
-                        <div class="row-tag">{{ cat }}</div>
-                    </div>
-                    <div class="row-meta">{{ t.area }} · {{ t.postcode_prefix }}</div>
-                    <div class="row-aside">{{ show_counts.get(t.slug, 0) }} shows</div>
-                </a>
-            {% endfor %}
-        </ul>
-    </section>
-{% endfor %}
+<section class="rail">
+    <div class="rail-head">
+        <div class="rail-idx">01</div>
+        <h2 class="rail-title">All venues <small>{{ theatres | length }} listed, A–Z</small></h2>
+        <a class="rail-count" href="/shows">Browse the index ›</a>
+    </div>
+    <ul class="row-list">
+        {% for t in theatres %}
+            <a class="row row-theatre" href="/theatres/{{ t.slug }}">
+                <div class="row-idx">{{ '%03d' % loop.index }}</div>
+                <div class="row-body">
+                    <div class="row-title">{{ t.name }}</div>
+                    <div class="row-tag">{{ t.category }}</div>
+                </div>
+                <div class="row-meta">{{ t.area }} · {{ t.postcode_prefix }}</div>
+                <div class="row-aside">{{ show_counts.get(t.slug, 0) }} shows</div>
+            </a>
+        {% endfor %}
+    </ul>
+</section>
 
 {% endblock %}

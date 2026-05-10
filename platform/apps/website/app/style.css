@@ -436,6 +436,7 @@ a.row-venue:hover {
 
 @media (max-width: 720px) {
   .row { grid-template-columns: 32px 60px 1fr; gap: 12px; }
+  .row .thumb { width: 60px; height: auto; }
   .row .row-venue, .row .row-dates { display: none; }
   .row-theatre { grid-template-columns: 32px 1fr 64px; }
   .row-theatre .row-meta { display: none; }

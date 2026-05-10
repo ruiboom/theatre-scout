@@ -19,7 +19,7 @@ interface Env {
  */
 export class ListingsMCP extends McpAgent<Env> {
   server = new McpServer({
-    name: 'anywhere-but-west-end',
+    name: 'theatre-scout',
     version: '0.0.1',
   });
 

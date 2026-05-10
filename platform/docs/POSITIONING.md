@@ -40,7 +40,9 @@ The "punt" angle is the strongest wedge:
 
 ### Status
 
-None of the shortlist landed. Founder pondering further. Possible direction: keep `Anywhere But The West End` as the **strapline** under whatever name eventually gets picked — *"Punters: anywhere but the West End"* works as a structure.
+**Landed on `Theatre Scout`** (May 2026) — the same name `scout/` already used. Pragmatic over poetic: the slug `theatre-scout` was already on github.com/ruiboom/theatre-scout, the User-Agent had been hitting venues for months as `TheatreScout/0.1`, and the design system's `.ts-` class prefix meant a rebrand-to-anything-else would have fought the existing assets. *"Anywhere but the West End"* survives as the strapline / About-page hook — the wedge messaging is what mattered, not the literal name.
+
+The shortlist below is preserved for reference / future workshop fodder.
 
 ## On scope
 

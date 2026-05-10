@@ -5,8 +5,8 @@ import { fmtRelative } from '@/lib/format';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Anywhere But The West End',
-    template: '%s · Anywhere But The West End',
+    default: 'Theatre Scout',
+    template: '%s · Theatre Scout',
   },
   description:
     "London's other theatre scene. Pub theatres, fringe spaces, converted warehouses — where the interesting work happens.",
@@ -36,7 +36,7 @@ export default async function RootLayout({
             </a>
             <strong>TS</strong>
             <span className="bar-sep">/</span>
-            <a href="/">Anywhere But The West End</a>
+            <a href="/">Theatre Scout</a>
             <span className="bar-sep">/</span>
             <span>London</span>
           </div>
@@ -57,7 +57,7 @@ export default async function RootLayout({
         </header>
         <main className="page">{children}</main>
         <footer className="foot">
-          <div>© Anywhere But The West End · London only · Daily index</div>
+          <div>© Theatre Scout · London only · Daily index</div>
           <div>Listings sourced from 70 venues</div>
         </footer>
       </body>

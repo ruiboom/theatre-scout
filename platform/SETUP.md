@@ -229,7 +229,7 @@ Edit (create if missing):
 ```json
 {
   "mcpServers": {
-    "anywhere-but-west-end": {
+    "theatre-scout": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "http://localhost:8787/mcp"]
     }
@@ -246,7 +246,7 @@ Claude should call `whats_on` and reply with the seeded shows.
 If your Claude Desktop is recent enough to support direct URL config, you can also use:
 
 ```json
-{ "mcpServers": { "anywhere-but-west-end": { "url": "http://localhost:8787/mcp" } } }
+{ "mcpServers": { "theatre-scout": { "url": "http://localhost:8787/mcp" } } }
 ```
 
 ---

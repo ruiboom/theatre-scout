@@ -48,7 +48,7 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 - [ ] Email integration (Beehiiv or Buttondown) — pull "new this week" via the API on a cron
 - [ ] Social bot (Buffer + Make.com) — post new listings, throttled
 - [ ] Admin CMS — password-protected `/admin` for manual entry and corrections
-- [ ] Pick a real name (placeholder is *Anywhere But The West End* — see [`platform/docs/POSITIONING.md`](platform/docs/POSITIONING.md))
+- [x] Pick a real name — landed on **Theatre Scout** (May 2026). Display strings, MCP server name, scraper User-Agent and docs all updated. The shortlist + rationale is preserved in [`platform/docs/POSITIONING.md`](platform/docs/POSITIONING.md) for reference.
 
 ---
 

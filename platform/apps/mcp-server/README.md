@@ -45,7 +45,7 @@ pnpm --filter mcp-server dev       # http://localhost:8787/mcp
 # In claude_desktop_config.json:
 {
   "mcpServers": {
-    "anywhere-but-west-end": {
+    "theatre-scout": {
       "url": "http://localhost:8787/mcp"
     }
   }

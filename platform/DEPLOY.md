@@ -221,7 +221,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "anywhere-but-west-end": {
+    "theatre-scout": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "https://platform-mcp-server.<account>.workers.dev/mcp"]
     }

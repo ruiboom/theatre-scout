@@ -34,7 +34,7 @@ export default async function HomePage() {
             in London.
           </h1>
           <p className="hero-p">
-            Anywhere But The West End doesn&rsquo;t sell tickets. We list
+            Theatre Scout doesn&rsquo;t sell tickets. We list
             everything playing across {totalVenues || 70} venues outside the West End — from the
             National to a back room in Bethnal Green — and link you to the box
             office.

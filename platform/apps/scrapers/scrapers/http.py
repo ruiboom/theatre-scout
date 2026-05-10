@@ -24,7 +24,9 @@ from dataclasses import dataclass
 from types import TracebackType
 from typing import Any
 
-USER_AGENT = "AnywhereBuTheWestEnd/0.1 (+https://anywhere.example.com/bot)"
+# Identifies this scraper to venue ops. The URL points at the live site so
+# anyone curious about why their access logs show this UA can find a context.
+USER_AGENT = "TheatreScout/0.1 (+https://theatre-scout-zunz.vercel.app)"
 
 log = logging.getLogger(__name__)
 

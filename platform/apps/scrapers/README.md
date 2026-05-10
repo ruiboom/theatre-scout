@@ -58,7 +58,7 @@ uv run scrape all --enrich --replace --workers 16        # full pipeline, all ve
 ## Conventions
 
 - 1 req/sec per host, token-bucketed (`http.py::RateLimiter`).
-- User-Agent: `AnywhereBuTheWestEnd/0.1 (+https://anywhere.example.com/bot)`.
+- User-Agent: `TheatreScout/0.1 (+https://theatre-scout-zunz.vercel.app)`.
 - Honour robots.txt; skip disallowed paths with a warning.
 - Prefer schema.org JSON-LD (`Event` / `TheaterEvent`); fall back to per-venue CSS.
 - One failed adapter never crashes the run — the orchestrator records a `failed` ScrapeRun for that venue and moves on.

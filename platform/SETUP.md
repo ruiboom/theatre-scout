@@ -253,7 +253,7 @@ If your Claude Desktop is recent enough to support direct URL config, you can al
 
 ## 10. Run the test suite
 
-```bash
+```zsh
 # JS tests across the workspace (shared, website, mcp-server)
 pnpm test
 

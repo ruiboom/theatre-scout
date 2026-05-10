@@ -53,9 +53,7 @@ class LyricHammersmithAdapter(BaseAdapter):
 
             summary_el = card.css(".card__summary").first
             description = (
-                clean_text(summary_el.get_all_text(separator=" ", strip=True))
-                if summary_el
-                else ""
+                clean_text(summary_el.get_all_text(separator=" ", strip=True)) if summary_el else ""
             )
 
             cat_el = card.css(".card__categories .category").first

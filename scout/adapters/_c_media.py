@@ -92,7 +92,7 @@ def _extract_url(card: Selector, base_url: str, url_substring: str) -> str | Non
         if m:
             href = m.group(1).split("#", 1)[0].split("?", 1)[0]
             if url_substring in href:
-                return urllib.parse.urljoin(base_url, href)
+                return str(urllib.parse.urljoin(base_url, href))
     return None
 
 

@@ -54,8 +54,7 @@ class MaryleboneAdapter(BaseAdapter):
             )
 
             date_text = " ".join(
-                clean_text(d.get_all_text(separator=" ", strip=True))
-                for d in card.css(".date")
+                clean_text(d.get_all_text(separator=" ", strip=True)) for d in card.css(".date")
             )
             start, end = parse_date_range(date_text)
 

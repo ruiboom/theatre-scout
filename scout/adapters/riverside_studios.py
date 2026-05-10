@@ -86,10 +86,10 @@ def _extract_image(card: Selector, base_url: str) -> str | None:
         return None
     src = img.attrib.get("src")
     if isinstance(src, str) and src and not src.startswith("data:"):
-        return urllib.parse.urljoin(base_url, src)
+        return str(urllib.parse.urljoin(base_url, src))
     srcset = img.attrib.get("srcset")
     if isinstance(srcset, str) and srcset:
         m = _SRCSET_FIRST_RE.match(srcset)
         if m:
-            return urllib.parse.urljoin(base_url, m.group(1))
+            return str(urllib.parse.urljoin(base_url, m.group(1)))
     return None

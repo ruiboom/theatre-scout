@@ -12,6 +12,7 @@ never need to know what the DB column is called.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -81,7 +82,15 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
             prior_first_seen = _first_seen_by_url(cur, venue_id)
             cur.execute("DELETE FROM shows WHERE venue_id = %s", (venue_id,))
 
+        # Dedupe within a single run by slug. Adapters occasionally emit
+        # near-duplicates (e.g. nav links matched as cards) that all collapse
+        # to the same slug after URL hashing — first one wins.
+        seen_slugs: set[str] = set()
         for s in list(shows):
+            slug = _slug_for(s)
+            if slug in seen_slugs:
+                continue
+            seen_slugs.add(slug)
             cur.execute(
                 """
                 INSERT INTO shows (
@@ -123,7 +132,7 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
                     last_seen_at      = NOW()
                 """,
                 (
-                    _slug_for(s),
+                    slug,
                     venue_id,
                     s.title,
                     s.show_type,
@@ -151,13 +160,18 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
 
 
 def _slug_for(s: Show) -> str:
-    """Stable slug for the URL part of /shows/<slug>. Composed from the venue
-    slug + title so that a returning production in a later season stays unique
-    if the title shape is identical."""
-    base = slugify(f"{s.theatre_slug}-{s.title}")[:120]
+    """Stable slug for the URL part of /shows/<slug>.
+
+    Composed from `venue + title (+ year)` plus a 6-char URL hash. The URL
+    hash is what guarantees uniqueness — without it, an adapter that captures
+    multiple distinct cards as the same human-friendly title (e.g. multiple
+    nav links titled "What's On" with different hrefs) would collide.
+    """
+    base = slugify(f"{s.theatre_slug}-{s.title}")[:100]
     if s.start_date is not None:
         base = f"{base}-{s.start_date.year}"
-    return base
+    h = hashlib.sha1(str(s.url).encode("utf-8")).hexdigest()[:6]
+    return f"{base}-{h}"
 
 
 def _venue_id_for(cur: psycopg.Cursor, slug: str) -> str | None:

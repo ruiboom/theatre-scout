@@ -58,7 +58,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     # --- fringe ---
     ("camden-peoples", "https://cptheatre.co.uk/whats-on", ".event"),
     ("cockpit", "https://www.thecockpit.org.uk/", 'a[href*="/show/"]'),
-    ("etcetera", "https://www.etceteratheatrecamden.com/events/", 'a[href*="/event/"]'),
     ("finborough", "https://www.finboroughtheatre.co.uk/productions", 'a[href*="/productions/"]'),
     ("hen-and-chickens", "https://henandchickens.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("jermyn-street", "https://www.jermynstreettheatre.co.uk/now-next/", 'a[href*="/show/"]'),

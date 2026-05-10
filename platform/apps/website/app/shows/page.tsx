@@ -1,6 +1,5 @@
 import { searchShows } from '@/lib/queries/shows';
-import type { Show } from '@platform/shared';
-import type { VenueCategory } from '@platform/shared';
+import type { Show, ShowType, VenueCategory } from '@platform/shared';
 import { fmtDateRange, fmtPrice, pad2, pad3 } from '@/lib/format';
 import { trackEvent, trackedExternalHref } from '@/lib/track';
 
@@ -22,7 +21,32 @@ const SHOW_TYPES = [
   'cabaret',
   'other',
 ] as const;
+const SHOW_TYPE_RAILS: Array<{ key: ShowType; label: string }> = [
+  { key: 'play', label: 'Plays' },
+  { key: 'musical', label: 'Musicals' },
+  { key: 'comedy', label: 'Comedy' },
+  { key: 'dance', label: 'Dance' },
+  { key: 'opera', label: 'Opera' },
+  { key: 'family', label: 'Family' },
+  { key: 'cabaret', label: 'Cabaret' },
+  { key: 'other', label: 'Other' },
+];
 const RAIL_PICK_LIMIT = 4;
+
+/**
+ * Pick up to `n` random items from `arr`. Used on the rails view so each
+ * page load surfaces a different slice of what's playing — the rail's
+ * "View all" link is there for the deterministic full list.
+ */
+function sampleRandom<T>(arr: T[], n: number): T[] {
+  const copy = [...arr];
+  const take = Math.min(n, copy.length);
+  for (let i = 0; i < take; i++) {
+    const j = i + Math.floor(Math.random() * (copy.length - i));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, take);
+}
 
 type Search = Record<string, string | string[] | undefined>;
 
@@ -122,11 +146,28 @@ export default async function ShowsPage({
   // Hidden inputs for the search form preserve every filter except q.
   const carry = Object.entries(current).filter(([k, v]) => v && k !== 'q');
 
-  // Bucket into rails for the rails view.
-  const rails = CATEGORIES.map(({ key, label }) => {
-    const inCat = shows.filter((s) => s.venue.category === key);
-    return { key, label, total: inCat.length, picks: inCat.slice(0, RAIL_PICK_LIMIT) };
+  // Bucket into rails for the rails view: by show type first, then by venue tier.
+  const typeRails = SHOW_TYPE_RAILS.map(({ key, label }) => {
+    const inType = shows.filter((s) => s.show_type === key);
+    return {
+      kind: 'type' as const,
+      key,
+      label,
+      total: inType.length,
+      picks: sampleRandom(inType, RAIL_PICK_LIMIT),
+    };
   });
+  const categoryRails = CATEGORIES.map(({ key, label }) => {
+    const inCat = shows.filter((s) => s.venue.category === key);
+    return {
+      kind: 'category' as const,
+      key,
+      label,
+      total: inCat.length,
+      picks: sampleRandom(inCat, RAIL_PICK_LIMIT),
+    };
+  });
+  const rails = [...typeRails, ...categoryRails];
 
   return (
     <>
@@ -266,7 +307,7 @@ export default async function ShowsPage({
         rails.map(
           (rail, i) =>
             rail.total > 0 && (
-              <section key={rail.key} className="rail">
+              <section key={`${rail.kind}-${rail.key}`} className="rail">
                 <div className="rail-head">
                   <div className="rail-idx">{pad2(i + 1)}</div>
                   <h2 className="rail-title">
@@ -274,7 +315,11 @@ export default async function ShowsPage({
                   </h2>
                   <a
                     className="rail-count"
-                    href={chipUrl({ cat: rail.key, view: 'list' })}
+                    href={chipUrl(
+                      rail.kind === 'type'
+                        ? { type: rail.key, view: 'list' }
+                        : { cat: rail.key, view: 'list' },
+                    )}
                   >
                     View all ›
                   </a>

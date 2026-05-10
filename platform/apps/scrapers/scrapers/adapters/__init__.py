@@ -40,6 +40,7 @@ def load_all() -> None:
     from . import old_red_lion  # noqa: F401
     from . import old_vic  # noqa: F401
     from . import omnibus  # noqa: F401
+    from . import open_air_theatre  # noqa: F401
     from . import park_theatre  # noqa: F401
     from . import pleasance  # noqa: F401
     from . import richmond  # noqa: F401

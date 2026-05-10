@@ -1,9 +1,11 @@
 import { listVenuesWithCounts } from '@/lib/queries/venues';
 import { pad3 } from '@/lib/format';
+import { trackEvent } from '@/lib/track';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  void trackEvent({ type: 'visit', path: '/' });
   let venues: Awaited<ReturnType<typeof listVenuesWithCounts>> = [];
   let error: string | null = null;
   try {

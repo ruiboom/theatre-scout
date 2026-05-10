@@ -2,6 +2,7 @@ import { searchShows } from '@/lib/queries/shows';
 import type { Show } from '@platform/shared';
 import type { VenueCategory } from '@platform/shared';
 import { fmtDateRange, fmtPrice, pad2, pad3 } from '@/lib/format';
+import { trackEvent, trackedExternalHref } from '@/lib/track';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,10 @@ export default async function ShowsPage({
 }) {
   const sp = await searchParams;
   const q = pickStr(sp.q);
+
+  // Page view + (if there's a search query) search tracking, fire-and-forget.
+  void trackEvent({ type: 'visit', path: '/shows' });
+  if (q) void trackEvent({ type: 'search', query: q });
   const filterType = pickStr(sp.type);
   const filterCat = pickStr(sp.cat) as '' | VenueCategory;
   const filterWhen = pickStr(sp.when); // '', 'today', 'week', 'new'
@@ -329,7 +334,7 @@ function ShowCard({ show }: { show: Show }) {
       <div className="card-meta">{show.show_type}</div>
       <a
         className="card-title"
-        href={show.booking_url}
+        href={trackedExternalHref(show.slug, show.booking_url)}
         target="_blank"
         rel="noopener noreferrer"
         title={show.description_short || undefined}
@@ -361,7 +366,7 @@ function ShowRow({ idx, show }: { idx: number; show: Show }) {
       <div className="row-body">
         <a
           className="row-title"
-          href={show.booking_url}
+          href={trackedExternalHref(show.slug, show.booking_url)}
           target="_blank"
           rel="noopener noreferrer"
           title={show.description_short || undefined}

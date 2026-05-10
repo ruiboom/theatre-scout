@@ -74,7 +74,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
         "https://trafalgartickets.com/churchill-theatre-bromley/en-GB",
         'a[href*="/event/"]',
     ),
-    ("eventim-apollo", "https://www.eventimapollo.com/events/", 'a[href*="/events/"]'),
     ("greenwich", "https://greenwichtheatre.org.uk/whats-on/", 'a[href*="/events/"]'),
     (
         "new-wimbledon",

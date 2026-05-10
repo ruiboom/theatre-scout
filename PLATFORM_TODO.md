@@ -39,6 +39,7 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 ## Phase C — known follow-ups (don't block on these)
 
 - [ ] Port `scout/` adapters into `platform/apps/scrapers/scrapers/adapters/` one venue at a time (the API now matches scout's exactly — most ports are: copy the file, swap `scout.x` → `..x` imports, add `@register`, add to `adapters/__init__.py::load_all()`)
+- [ ] **Fix `open-air-theatre` adapter — inconsistent dates.** Same listing page produces some shows with `start_date`/`end_date` populated and others with both NULL. Symptom is a noisy programme view. The platform tolerates NULL-date shows now, but the underlying scout adapter (currently `("open-air-theatre", "https://openairtheatre.com/whats-on/", "article")` in `scout/adapters/bulk.py`) needs to be promoted to a bespoke parser that walks each card's date block reliably.
 - [ ] Add a "Refresh" button on the platform website that triggers a GitHub Actions `workflow_dispatch` (live `scout/` does this in-process; serverless deployment can't, so route it through Actions)
 - [ ] Live venue map widget on `/venues/[slug]` — port Leaflet block from `scout/web/templates/theatre.html`, source coordinates from `theatre-coords.yaml`
 - [ ] "New" filter chip on `/shows` should query `first_seen_at` directly (currently falls back to recent ordering)

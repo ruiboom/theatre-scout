@@ -43,7 +43,7 @@ function sampleRandom<T>(arr: T[], n: number): T[] {
   const take = Math.min(n, copy.length);
   for (let i = 0; i < take; i++) {
     const j = i + Math.floor(Math.random() * (copy.length - i));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
   }
   return copy.slice(0, take);
 }

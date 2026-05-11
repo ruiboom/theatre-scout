@@ -168,7 +168,14 @@ export async function searchShows(
     ${input.neighbourhood ? sql`AND v.neighbourhood ILIKE ${input.neighbourhood}` : sql``}
     ${input.category ? sql`AND v.category = ${input.category}` : sql``}
     ${input.show_type ? sql`AND s.show_type = ${input.show_type}` : sql``}
-    ${input.q ? sql`AND s.search_tsv @@ websearch_to_tsquery('english', ${input.q})` : sql``}
+    ${
+      input.q
+        ? sql`AND (
+            s.search_tsv @@ websearch_to_tsquery('english', ${input.q})
+            OR v.name ILIKE '%' || ${input.q} || '%'
+          )`
+        : sql``
+    }
     ${
       input.near
         ? sql`AND ST_DWithin(

@@ -208,8 +208,8 @@ export default async function ShowsPage({
               type="search"
               name="q"
               defaultValue={q}
-              placeholder="Search title…"
-              aria-label="Search title"
+              placeholder="Search…"
+              aria-label="Search"
             />
           </form>
           <div className="tabs">

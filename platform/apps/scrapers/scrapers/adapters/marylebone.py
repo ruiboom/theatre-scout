@@ -73,7 +73,7 @@ class MaryleboneAdapter(BaseAdapter):
                     Show(
                         theatre_slug=self.slug,
                         title=title,
-                        show_type=classify(f"{title} {description} {genre}"),
+                        show_type=classify(f"{title} {description}", genre=genre),
                         url=url,
                         description=description,
                         start_date=start,

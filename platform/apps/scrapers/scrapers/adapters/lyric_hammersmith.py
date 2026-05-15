@@ -66,7 +66,7 @@ class LyricHammersmithAdapter(BaseAdapter):
                     Show(
                         theatre_slug=self.slug,
                         title=title,
-                        show_type=classify(f"{title} {description} {cat}"),
+                        show_type=classify(f"{title} {description}", genre=cat),
                         url=url,
                         description=description,
                         start_date=start,

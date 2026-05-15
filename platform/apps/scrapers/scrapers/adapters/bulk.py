@@ -10,6 +10,7 @@ plain HTTP requests.
 
 from __future__ import annotations
 
+from ..models import ShowType
 from ._generic import GenericAdapter
 from .registry import register
 
@@ -19,6 +20,14 @@ from .registry import register
 # Keeping them in `_JS_VENUES` cost ~3 min per scrape on retries — drop instead.
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
+}
+
+# Venues whose programme is overwhelmingly stand-up/comedy. This is only the
+# fallback default — JSON-LD type, site genre and title keywords (steps D and
+# C) all still take precedence, so genuine plays/musicals here stay correct.
+_DEFAULT_SHOW_TYPE: dict[str, ShowType] = {
+    "hen-and-chickens": "comedy",
+    "underbelly-boulevard": "comedy",
 }
 
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
@@ -83,6 +92,7 @@ def _make_adapter(slug: str, url: str, card_selector: str) -> type[GenericAdapte
             "url": url,
             "card_selector": card_selector,
             "requires_js": slug in _JS_VENUES,
+            "default_show_type": _DEFAULT_SHOW_TYPE.get(slug, "play"),
         },
     )
     return cls

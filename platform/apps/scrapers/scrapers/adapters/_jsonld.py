@@ -15,20 +15,25 @@ from typing import Any
 
 from scrapling.parser import Selector
 
+from ..classify import classify
 from ..models import Show, ShowType
 from ..text import clean_description, clean_text
 
 log = logging.getLogger(__name__)
 
-EVENT_TYPE_TO_SHOW_TYPE: dict[str, ShowType] = {
-    "Event": "play",
-    "TheaterEvent": "play",
+# Specific schema.org event types we trust as authoritative.
+SPECIFIC_EVENT_TYPE_TO_SHOW_TYPE: dict[str, ShowType] = {
     "ComedyEvent": "comedy",
     "DanceEvent": "dance",
     "MusicEvent": "other",
     "Festival": "other",
     "ScreeningEvent": "other",
 }
+
+# Generic event types: recognised as events, but too vague to trust for
+# show_type — venues routinely wrap stand-up, plays and musicals all in
+# TheaterEvent. Fall through to the heuristic classifier instead.
+AMBIGUOUS_EVENT_TYPES: frozenset[str] = frozenset({"Event", "TheaterEvent"})
 
 
 def parse_jsonld(html: str, theatre_slug: str, base_url: str) -> list[Show]:
@@ -63,14 +68,17 @@ def _flatten(data: Any) -> list[dict[str, Any]]:
     return out
 
 
+def _specific_show_type(types: list[str]) -> ShowType | None:
+    for t in types:
+        if t in SPECIFIC_EVENT_TYPE_TO_SHOW_TYPE:
+            return SPECIFIC_EVENT_TYPE_TO_SHOW_TYPE[t]
+    return None
+
+
 def _node_to_show(node: dict[str, Any], theatre_slug: str, base_url: str) -> Show | None:
     types = _types_of(node)
-    show_type: ShowType | None = None
-    for t in types:
-        if t in EVENT_TYPE_TO_SHOW_TYPE:
-            show_type = EVENT_TYPE_TO_SHOW_TYPE[t]
-            break
-    if show_type is None:
+    specific = _specific_show_type(types)
+    if specific is None and not any(t in AMBIGUOUS_EVENT_TYPES for t in types):
         return None
 
     name = clean_text(node.get("name") or "")
@@ -78,13 +86,18 @@ def _node_to_show(node: dict[str, Any], theatre_slug: str, base_url: str) -> Sho
     if not name or not url:
         return None
     full_url = urllib.parse.urljoin(base_url, url)
+    description = clean_description(node.get("description") or "")
+
+    # A specific type wins outright; a generic Event/TheaterEvent is too vague
+    # to trust, so reclassify from name + description heuristically.
+    show_type = specific if specific is not None else classify(f"{name} {description}")
 
     try:
         return Show(
             theatre_slug=theatre_slug,
             title=name,
             show_type=show_type,
-            description=clean_description(node.get("description") or ""),
+            description=description,
             url=full_url,
             start_date=_parse_date(node.get("startDate")),
             end_date=_parse_date(node.get("endDate")),

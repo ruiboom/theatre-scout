@@ -67,7 +67,7 @@ class RiversideStudiosAdapter(BaseAdapter):
                     Show(
                         theatre_slug=self.slug,
                         title=title,
-                        show_type=classify(f"{title} {tag}"),
+                        show_type=classify(title, genre=tag),
                         url=url,
                         start_date=start,
                         end_date=end,

@@ -90,7 +90,7 @@ def parse_atg(html: str, base_url: str, *, theatre_slug: str, venue_slug: str) -
                 Show(
                     theatre_slug=theatre_slug,
                     title=title,
-                    show_type=classify(f"{title} {genre}"),
+                    show_type=classify(title, genre=genre),
                     url=url,
                     start_date=start,
                     end_date=end,

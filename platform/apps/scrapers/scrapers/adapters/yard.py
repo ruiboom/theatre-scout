@@ -80,7 +80,7 @@ class YardAdapter(BaseAdapter):
                     Show(
                         theatre_slug=self.slug,
                         title=title,
-                        show_type=classify(f"{title} {genre}"),
+                        show_type=classify(title, genre=genre),
                         url=url,
                         start_date=start,
                         end_date=end,

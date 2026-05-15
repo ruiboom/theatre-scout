@@ -41,7 +41,9 @@ def list_venues() -> None:
 def scrape_venue(
     slug: str,
     enrich: bool = typer.Option(False, "--enrich", help="Fetch each show's detail page."),
-    replace: bool = typer.Option(False, "--replace", help="Wipe existing rows for this venue first."),
+    replace: bool = typer.Option(
+        False, "--replace", help="Wipe existing rows for this venue first."
+    ),
     workers: int = typer.Option(1, "--workers", help="Parallel workers for the enrich step."),
 ) -> None:
     """Scrape a single venue."""

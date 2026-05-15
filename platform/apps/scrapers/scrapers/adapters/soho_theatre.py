@@ -147,7 +147,7 @@ class SohoTheatreAdapter(BaseAdapter):
             return Show(
                 theatre_slug=self.slug,
                 title=title,
-                show_type=classify(f"{title} {subtitle}"),
+                show_type=classify(f"{title} {subtitle}", default="comedy"),
                 url=url,
                 description=subtitle,
                 start_date=start,

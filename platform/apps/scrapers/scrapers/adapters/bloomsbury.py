@@ -65,7 +65,7 @@ class BloomsburyAdapter(BaseAdapter):
 
             tag_el = card.css(".es-pill").first
             tag = tag_el.get_all_text(strip=True) if tag_el else ""
-            show_type = classify(f"{title} {description} {tag}", default="other")
+            show_type = classify(f"{title} {description}", genre=tag, default="other")
 
             try:
                 shows.append(

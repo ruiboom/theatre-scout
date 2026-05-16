@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, HttpUrl, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, HttpUrl
 
 Category = Literal["major", "mid", "fringe", "outer"]
 ShowType = Literal["play", "musical", "comedy", "dance", "opera", "family", "cabaret", "other"]

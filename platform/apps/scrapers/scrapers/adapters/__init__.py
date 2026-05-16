@@ -23,42 +23,44 @@ def load_all() -> None:
     Bespoke adapters are imported by name; the bulk pattern is loaded via its
     `load()` helper. Idempotent — safe to call many times.
     """
-    # Bespoke modules — add an import here when porting one from scout.
-    from . import almeida  # noqa: F401
-    from . import arcola  # noqa: F401
-    from . import bloomsbury  # noqa: F401
-    from . import charing_cross  # noqa: F401
-    from . import churchill  # noqa: F401
-    from . import donmar_warehouse  # noqa: F401
-    from . import drayton_arms  # noqa: F401
-    from . import etcetera  # noqa: F401
-    from . import eventim_apollo  # noqa: F401
-    from . import hackney_empire  # noqa: F401
-    from . import lyric_hammersmith  # noqa: F401
-    from . import marylebone  # noqa: F401
-    from . import new_wimbledon  # noqa: F401
-    from . import old_red_lion  # noqa: F401
-    from . import old_vic  # noqa: F401
-    from . import omnibus  # noqa: F401
-    from . import open_air_theatre  # noqa: F401
-    from . import park_theatre  # noqa: F401
-    from . import pleasance  # noqa: F401
-    from . import richmond  # noqa: F401
-    from . import riverside_studios  # noqa: F401
-    from . import royal_court  # noqa: F401
-    from . import sadlers_wells  # noqa: F401
-    from . import soho_theatre  # noqa: F401
-    from . import tower  # noqa: F401
-    from . import troubadour_canary_wharf  # noqa: F401
-    from . import troubadour_wembley_park  # noqa: F401
-    from . import union  # noqa: F401
-    from . import upstairs_at_the_gatehouse  # noqa: F401
-    from . import vaults  # noqa: F401
-    from . import waterloo_east  # noqa: F401
-    from . import white_bear  # noqa: F401
-    from . import yard  # noqa: F401
-
-    # Bulk-registered GenericAdapter subclasses.
-    from . import bulk
+    # Each module self-registers via @register on import (hence noqa: F401);
+    # `bulk` also exposes load() below. Add new bespoke modules here when
+    # porting from scout.
+    from . import (
+        almeida,  # noqa: F401
+        arcola,  # noqa: F401
+        bloomsbury,  # noqa: F401
+        bulk,
+        charing_cross,  # noqa: F401
+        churchill,  # noqa: F401
+        donmar_warehouse,  # noqa: F401
+        drayton_arms,  # noqa: F401
+        etcetera,  # noqa: F401
+        eventim_apollo,  # noqa: F401
+        hackney_empire,  # noqa: F401
+        lyric_hammersmith,  # noqa: F401
+        marylebone,  # noqa: F401
+        new_wimbledon,  # noqa: F401
+        old_red_lion,  # noqa: F401
+        old_vic,  # noqa: F401
+        omnibus,  # noqa: F401
+        open_air_theatre,  # noqa: F401
+        park_theatre,  # noqa: F401
+        pleasance,  # noqa: F401
+        richmond,  # noqa: F401
+        riverside_studios,  # noqa: F401
+        royal_court,  # noqa: F401
+        sadlers_wells,  # noqa: F401
+        soho_theatre,  # noqa: F401
+        tower,  # noqa: F401
+        troubadour_canary_wharf,  # noqa: F401
+        troubadour_wembley_park,  # noqa: F401
+        union,  # noqa: F401
+        upstairs_at_the_gatehouse,  # noqa: F401
+        vaults,  # noqa: F401
+        waterloo_east,  # noqa: F401
+        white_bear,  # noqa: F401
+        yard,  # noqa: F401
+    )
 
     bulk.load()

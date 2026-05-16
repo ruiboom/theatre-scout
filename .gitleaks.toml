@@ -1,0 +1,17 @@
+# gitleaks configuration.
+#
+# Keep the full built-in ruleset; we only add an allowlist.
+[extend]
+useDefault = true
+
+# tests/fixtures/ holds saved HTML scraped verbatim from the public theatre
+# websites we index. Those pages embed the SITES' OWN public, browser-delivered
+# front-end keys (Google Maps, Algolia search-only keys, analytics/CDN tokens) —
+# they are not our credentials, were already public on the live sites, and must
+# stay byte-for-byte intact for the parser tests to be meaningful. Scanning them
+# only produces noise (verified: 57 findings, all third-party public keys).
+[[allowlists]]
+description = "Scraped third-party theatre-site HTML fixtures (their public front-end keys, not ours)"
+paths = [
+  '''tests/fixtures/''',
+]

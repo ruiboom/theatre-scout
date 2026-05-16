@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { lastScrapeAt } from '@/lib/queries/venues';
 import { fmtRelative } from '@/lib/format';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: {
@@ -64,6 +65,7 @@ export default async function RootLayout({
             <a href="/about">About</a>
           </div>
         </footer>
+        <Analytics />
       </body>
     </html>
   );

@@ -25,7 +25,7 @@ new_sqlite_classes = ["ListingsMCP"]
 # a `--preview` namespace and add `preview_id` for `wrangler dev`.)
 [[kv_namespaces]]
 binding = "OAUTH_KV"
-id = "REPLACE_WITH_OAUTH_KV_NAMESPACE_ID"
+id = "09abb89349fa40e3b8d01df83670a0e3"
 
 [vars]
 # Default URL the worker calls. Override with `wrangler secret put API_BASE_URL`

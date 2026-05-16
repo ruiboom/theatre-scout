@@ -1,11 +1,8 @@
 export const metadata = { title: 'FAQ' };
 
 /**
- * One placeholder to fill before publishing — search for "TODO:" below.
- *   GITHUB_REPO_URL — repo URL (currently private)
- *
  * Both ChatGPT and Claude connect via the same remote MCP server URL
- * (add-connector method); there is no longer a separate Custom GPT link.
+ * (add-connector method); there is no separate Custom GPT link.
  */
 
 export default function FaqPage() {
@@ -122,9 +119,8 @@ export default function FaqPage() {
         Theatre Scout.
       </p>
       <p>
-        The repo is currently private, so to file an issue you&rsquo;ll need to
-        be added as a collaborator first &mdash; mention that when you get in
-        touch.
+        The repo is public, so anyone with a GitHub account can open an issue
+        &mdash; the link is under <em>Who runs this?</em> below.
       </p>
 
       <h2>Can I use Theatre Scout inside ChatGPT?</h2>
@@ -202,8 +198,9 @@ export default function FaqPage() {
         theatre or ticketing company. The code lives on GitHub:
       </p>
       <p>
-        {/* TODO: paste GitHub repo URL — note the repo is currently private */}
-        <code>[TODO: GitHub repo URL &mdash; currently private]</code>
+        <a href="https://github.com/ruiboom/theatre-scout">
+          github.com/ruiboom/theatre-scout
+        </a>
       </p>
       <p>
         For bug reports, missing data or new venue proposals, file an issue

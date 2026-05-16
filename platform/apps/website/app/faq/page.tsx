@@ -1,10 +1,11 @@
 export const metadata = { title: 'FAQ' };
 
 /**
- * Three placeholders to fill before publishing — search for "TODO:" below.
- *   1. CUSTOM_GPT_URL  — published Custom GPT link
- *   2. MCP_SERVER_URL  — deployed MCP worker (replace <account>)
- *   3. GITHUB_REPO_URL — repo URL (currently private)
+ * One placeholder to fill before publishing — search for "TODO:" below.
+ *   GITHUB_REPO_URL — repo URL (currently private)
+ *
+ * Both ChatGPT and Claude connect via the same remote MCP server URL
+ * (add-connector method); there is no longer a separate Custom GPT link.
  */
 
 export default function FaqPage() {
@@ -128,26 +129,35 @@ export default function FaqPage() {
 
       <h2>Can I use Theatre Scout inside ChatGPT?</h2>
       <p>
-        Yes &mdash; Theatre Scout has a Custom GPT that can search shows,
-        recommend things to see, and answer questions about specific venues,
-        all backed by the same data as the website.
+        Yes &mdash; Theatre Scout runs as a remote MCP server that ChatGPT can
+        connect to, so it can search shows and make recommendations directly
+        inside a conversation.
       </p>
+      <p>The server URL is:</p>
       <p>
-        {/* TODO: replace with published Custom GPT link, e.g. https://chatgpt.com/g/<id>-theatre-scout */}
-        <code>[TODO: published Custom GPT link]</code>
+        <code>https://platform-mcp-server.boomclick.workers.dev/mcp</code>
       </p>
-      <p>To add it:</p>
+      <p>To add it in ChatGPT:</p>
       <ol>
-        <li>Open the link above in ChatGPT.</li>
         <li>
-          Click <strong>Start chat</strong>.
+          Open <strong>Settings &rarr; Connectors</strong>.
         </li>
         <li>
-          Ask it things like <em>&ldquo;what&rsquo;s on at the Almeida this month?&rdquo;</em>{' '}
-          or <em>&ldquo;recommend a fringe play for Friday night under £20.&rdquo;</em>
+          Choose <strong>Add custom connector</strong>.
+        </li>
+        <li>Paste the server URL above.</li>
+        <li>
+          When prompted, complete the <strong>Authorize</strong> consent
+          screen &mdash; Theatre Scout uses OAuth, so you approve access once
+          and the tools become available.
         </li>
       </ol>
-      <p>A free ChatGPT account is enough; the GPT itself is free to use.</p>
+      <p>
+        Custom connectors require a ChatGPT plan that supports them (Plus, Pro,
+        Business or Enterprise). Once connected, ask things like{' '}
+        <em>&ldquo;what&rsquo;s on at the Almeida this month?&rdquo;</em> or{' '}
+        <em>&ldquo;recommend a fringe play for Friday night under £20.&rdquo;</em>
+      </p>
 
       <h2>Can I use Theatre Scout inside Claude?</h2>
       <p>

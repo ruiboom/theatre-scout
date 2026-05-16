@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ruiboom/theatre-scout",
+  "title": "Theatre Scout",
+  "description": "London theatre listings outside the West End — search 68 venues by date, area, price, vibe.",
+  "websiteUrl": "https://theatre-scout-zunz.vercel.app",
+  "repository": {
+    "url": "https://github.com/ruiboom/theatre-scout",
+    "source": "github"
+  },
+  "version": "0.0.1",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://platform-mcp-server.boomclick.workers.dev/mcp"
+    },
+    {
+      "type": "sse",
+      "url": "https://platform-mcp-server.boomclick.workers.dev/sse"
+    }
+  ]
+}

@@ -63,6 +63,10 @@ export default async function RootLayout({
             <a href="/faq">FAQ</a>
             <span className="bar-sep"> · </span>
             <a href="/about">About</a>
+            <span className="bar-sep"> · </span>
+            <a href="/privacy">Privacy</a>
+            <span className="bar-sep"> · </span>
+            <a href="/terms">Terms</a>
           </div>
         </footer>
         <Analytics />

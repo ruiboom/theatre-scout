@@ -157,8 +157,7 @@ export default function FaqPage() {
       </p>
       <p>The server URL is:</p>
       <p>
-        {/* TODO: replace <account> with the Cloudflare workers.dev subdomain once the worker is deployed */}
-        <code>[TODO: https://platform-mcp-server.&lt;account&gt;.workers.dev/mcp]</code>
+        <code>https://platform-mcp-server.boomclick.workers.dev/mcp</code>
       </p>
       <p>
         To add it in <strong>Claude Desktop</strong>:
@@ -171,7 +170,11 @@ export default function FaqPage() {
           Choose <strong>Add a custom connector</strong>.
         </li>
         <li>Paste the server URL above.</li>
-        <li>Save and restart Claude.</li>
+        <li>
+          When prompted, complete the <strong>Authorize</strong> consent
+          screen &mdash; Theatre Scout uses OAuth, so you approve access
+          once and the tools become available.
+        </li>
       </ol>
       <p>
         Once connected, you can ask Claude things like{' '}

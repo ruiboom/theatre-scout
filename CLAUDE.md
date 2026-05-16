@@ -6,7 +6,33 @@ A local Python app that scrapes the websites of 68 London theatres outside the W
 
 ## Status
 
-Greenfield. No code yet — this document defines the intended architecture before implementation begins. When in doubt, follow the conventions here.
+The local Python scraper described below is built and working. There is
+**also** a separate, deployed product under `platform/` — see
+[Hosted platform](#hosted-platform). This document covers the local `scout/`
+app; when in doubt about it, follow the conventions here. Platform conventions
+live in [`platform/README.md`](platform/README.md).
+
+## Hosted platform
+
+`platform/` is an internet-facing system, independent of the local `scout/`
+scraper (it has its own Python scrapers, DB, and docs):
+
+- **Website + Internal API** — Next.js on Vercel
+  (`https://theatre-scout-zunz.vercel.app`), including public `/privacy` and
+  `/terms` pages linked from the site footer.
+- **Remote MCP server** — Cloudflare Workers
+  (`https://platform-mcp-server.boomclick.workers.dev/mcp`), **OAuth 2.1-protected**
+  via `@cloudflare/workers-oauth-provider` so Claude and ChatGPT can add it as
+  a connector. Consent is self-issued and anonymous (the listings are public,
+  read-only); delegating to a real IdP is the documented upgrade path if
+  per-user features are ever needed. `platform/apps/mcp-server/server.json` is
+  its MCP Registry manifest; `verify-oauth.sh` checks the OAuth contract.
+- **Database** — Neon Postgres. **Scrapers** — `platform/apps/scrapers`, run on
+  a GitHub Actions cron.
+
+Detailed docs: [`platform/README.md`](platform/README.md),
+[`platform/DEPLOY.md`](platform/DEPLOY.md),
+[`platform/apps/mcp-server/README.md`](platform/apps/mcp-server/README.md).
 
 ## Tech stack
 
@@ -120,6 +146,23 @@ Full list lives in [`theatres.yaml`](theatres.yaml). Counts:
 4. Register it in `scout/adapters/__init__.py` (slug → class).
 5. Write `tests/adapters/test_<slug>.py` that loads the fixture and asserts the parsed `Show` objects.
 6. Run `uv run pytest tests/adapters/test_<slug>.py` and `uv run scout scrape --theatre <slug>` to verify end-to-end.
+
+## Secrets & environment
+
+- **Never commit env files.** `.env*` is gitignored except `.env.example` (the
+  template). A real `.env.production` was once committed and had to be purged
+  from git history — do not repeat that.
+- Production credentials live only in their platform's secret store. The Neon
+  connection string is **Vercel env `DATABASE_URL`** (pooled, used by the
+  website/API) and **GitHub Actions secret `NEON_DATABASE_URL`** (direct, used
+  by the scraper cron — matches `.github/workflows/scrape.yml`). Rotating the
+  Neon password means updating both, then redeploying Vercel.
+- The hosted MCP server's inbound auth is OAuth (no shared secret); provider
+  state lives in the Cloudflare `OAUTH_KV` namespace.
+- `gitleaks` runs against full history; config at repo root
+  [`.gitleaks.toml`](.gitleaks.toml). `tests/fixtures/` is allowlisted — those
+  scraped HTML samples embed the *theatre sites'* own public front-end keys
+  (Google Maps, Algolia, analytics), not ours.
 
 ## Code conventions
 

@@ -38,6 +38,18 @@ There is no signup, no analytics, no external services. Everything runs on your 
 
 ---
 
+## Hosted platform
+
+Beyond this local app there is a deployed version under [`platform/`](platform/) — a Next.js site on Vercel, a Neon Postgres database, GitHub Actions scrapers, and a remote MCP server on Cloudflare Workers that Claude and ChatGPT can connect to:
+
+- **Site:** <https://theatre-scout-zunz.vercel.app> — with public [`/privacy`](https://theatre-scout-zunz.vercel.app/privacy) and [`/terms`](https://theatre-scout-zunz.vercel.app/terms) pages.
+- **Remote MCP server:** `https://platform-mcp-server.boomclick.workers.dev/mcp` — OAuth 2.1-protected; add it as a custom connector in Claude/ChatGPT and click *Authorize*. `platform/apps/mcp-server/server.json` is the MCP Registry manifest.
+- The hosted site uses cookieless analytics and anonymous server-side counts only (see its privacy page). The **local** app described in this README still has no signup, analytics, or external services.
+
+Setup, deployment, and operations live in the platform's own docs — see [Further reading](#further-reading).
+
+---
+
 ## System requirements
 
 - **macOS or Linux** (Windows untested; should work via WSL).
@@ -419,3 +431,9 @@ Each bespoke adapter has at least one HTML fixture under `tests/fixtures/<slug>.
 - **[BUILD.md](BUILD.md)** — milestone-by-milestone history of how the app was built.
 - **[QUESTION_LOG.md](QUESTION_LOG.md)** — autonomous decisions taken during the build.
 - **[RUN.md](RUN.md)** — operational runbook (covered by this README's Day-to-day commands section).
+
+Hosted platform (the deployed site + remote MCP server):
+
+- **[platform/README.md](platform/README.md)** — platform technical documentation.
+- **[platform/DEPLOY.md](platform/DEPLOY.md)** — how to deploy the site, MCP server, and scrapers.
+- **[platform/apps/mcp-server/README.md](platform/apps/mcp-server/README.md)** — the OAuth-protected MCP server (Auth, deploy, `verify-oauth.sh`).

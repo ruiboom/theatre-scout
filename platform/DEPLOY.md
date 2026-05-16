@@ -210,12 +210,12 @@ jobs:
       - run: uv run scrape all
         env:
           # Use the DIRECT (non-pooled) URL for batch jobs
-          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 ```
 
 Then in **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
 
-- `DATABASE_URL_DIRECT` — Neon's direct (non-pooled) URL.
+- `NEON_DATABASE_URL` — Neon's direct (non-pooled) URL (with `?sslmode=require`).
 
 Push the workflow, then **Actions → Scrape → Run workflow** to test it manually. You should see `uv run scrape all` finish and the row count in your Neon dashboard tick up.
 

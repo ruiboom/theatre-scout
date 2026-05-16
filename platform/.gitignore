@@ -15,10 +15,10 @@ build/
 .wrangler/
 *.tsbuildinfo
 
-# env
+# env — match ALL .env* variants except the example template
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # caches
 .cache/

@@ -13,6 +13,7 @@
     "clean": "rm -rf .wrangler dist"
   },
   "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^0.6.0",
     "@modelcontextprotocol/sdk": "^1.18.0",
     "@platform/shared": "workspace:*",
     "agents": "^0.0.95",

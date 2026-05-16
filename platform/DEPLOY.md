@@ -127,25 +127,48 @@ curl -s https://<your-vercel-domain>/api/v1/shows | jq '.total'
 
 ## 4. Cloudflare Workers — the MCP server
 
-The MCP server is a single Worker with a Durable Object for session storage. Deploy it from your laptop — it doesn't need GitHub integration.
+The MCP server is a single Worker with a Durable Object for session storage and a KV namespace for OAuth state. Deploy it from your laptop — it doesn't need GitHub integration.
+
+`wrangler` is a workspace dev-dependency, so invoke it with `npx wrangler`
+from `apps/mcp-server` (resolves the pinned version; no global pnpm needed).
 
 ```bash
 cd platform/apps/mcp-server
 
-pnpm dlx wrangler login                          # browser login, one-time
+npx wrangler login                          # browser login, one-time
 
-# point the worker at your live API
-pnpm dlx wrangler secret put API_BASE_URL
+# Optional — wrangler.toml already defaults API_BASE_URL to the live Vercel
+# deployment. Only set this to override it.
+npx wrangler secret put API_BASE_URL
 # paste: https://your-vercel-domain.com/api/v1
 
-pnpm dlx wrangler deploy
+# OAuth state store. Run once; paste the printed id into wrangler.toml
+# (the `[[kv_namespaces]]` block, replacing REPLACE_WITH_OAUTH_KV_NAMESPACE_ID).
+npx wrangler kv namespace create OAUTH_KV
+
+npx wrangler deploy
 ```
 
 The deploy output prints the URL — something like `https://platform-mcp-server.<your-account>.workers.dev`. The MCP endpoint is at `/mcp`.
 
+#### Verify the OAuth contract
+
+The `/mcp` endpoint is OAuth-protected (Claude and ChatGPT both require an auth handshake to add a connector). Public routes — health, info, the OpenAPI redirect — stay open. Verify both at once:
+
 ```bash
-curl https://platform-mcp-server.<your-account>.workers.dev/health   # {"ok":true}
+./verify-oauth.sh https://platform-mcp-server.<your-account>.workers.dev
 ```
+
+It asserts `/health` is open, the RFC 8414 + RFC 9728 discovery docs are served, and an unauthenticated `/mcp` call is rejected `401` with a `WWW-Authenticate` header — the signal that drives the client into the OAuth flow. All checks must pass before connecting a client.
+
+#### Connect Claude / ChatGPT
+
+There is no account system — the consent screen is a single **Authorize** button (the data is public, read-only listings). The OAuth flow exists only to satisfy the connector handshake.
+
+- **Claude** (web/desktop): Settings → Connectors → Add custom connector → paste `https://platform-mcp-server.<your-account>.workers.dev/mcp` → it opens the consent screen → click **Authorize** → tools appear.
+- **ChatGPT**: Settings → Connectors → add the same `/mcp` URL → same OAuth consent → test a tool.
+
+Dynamic Client Registration is enabled, so neither needs a manually pre-created client id/secret.
 
 > **Workers free tier:** 100,000 requests/day. Plenty for a single MCP server with low usage. **Durable Objects** count separately — if traffic gets meaningful you may need the **Workers Paid plan** ($5/mo) which includes 1M DO requests. Until launch you're almost certainly free.
 

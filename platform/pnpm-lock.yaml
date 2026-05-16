@@ -17,6 +17,9 @@ importers:
 
   apps/mcp-server:
     dependencies:
+      '@cloudflare/workers-oauth-provider':
+        specifier: ^0.6.0
+        version: 0.6.0
       '@modelcontextprotocol/sdk':
         specifier: ^1.18.0
         version: 1.29.0(zod@3.25.76)
@@ -187,6 +190,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-oauth-provider@0.6.0':
+    resolution: {integrity: sha512-KOkTWEjwVjfYGU78eyapKziuPuzKw9gIg4LpxbGmxWhNl4bAdiJzWXeV3nepFr+vmkEiTMEGk99Llj5j0tH2cw==}
 
   '@cloudflare/workers-types@4.20260510.1':
     resolution: {integrity: sha512-Wcmb56nJMHw1BLpArV3RSmWb/z0Zx3S8OJ5mVUTb+AVTbyopU9iJzZrFGlYX18Ju9hXxqak2mhFMq6sCaFssag==}
@@ -3056,6 +3062,8 @@ snapshots:
 
   '@cloudflare/workerd-windows-64@1.20250718.0':
     optional: true
+
+  '@cloudflare/workers-oauth-provider@0.6.0': {}
 
   '@cloudflare/workers-types@4.20260510.1': {}
 

@@ -15,6 +15,18 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["ListingsMCP"]
 
+# OAuth provider state: registered clients, grants, access/refresh tokens.
+# Create the namespace once against your Cloudflare account, then paste the id:
+#
+#   cd platform/apps/mcp-server
+#   pnpm dlx wrangler kv namespace create OAUTH_KV
+#
+# wrangler prints an `id = "..."` line — copy it below. (Optionally also create
+# a `--preview` namespace and add `preview_id` for `wrangler dev`.)
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "REPLACE_WITH_OAUTH_KV_NAMESPACE_ID"
+
 [vars]
 # Default URL the worker calls. Override with `wrangler secret put API_BASE_URL`
 # (recommended) or `[env.<name>].vars`. Pointed at the live Vercel deployment

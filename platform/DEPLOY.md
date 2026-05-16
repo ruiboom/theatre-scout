@@ -219,7 +219,7 @@ Then in **GitHub → Settings → Secrets and variables → Actions → New repo
 
 Push the workflow, then **Actions → Scrape → Run workflow** to test it manually. You should see `uv run scrape all` finish and the row count in your Neon dashboard tick up.
 
-> **Free for public repos.** Private repos get 2,000 minutes/month free, more than enough for one daily scrape.
+> **This repo is public, so Actions minutes are free and unmetered on standard runners** — far more than enough for one daily scrape.
 
 ### Why not Vercel Cron?
 
@@ -269,7 +269,7 @@ At pre-launch / low traffic — **$0/mo**. Realistic break points:
 | Vercel | Hobby (non-commercial) | Pro $20/mo when you take payments / heavy traffic |
 | Neon | 0.5 GB storage, scale-to-zero | Launch plan $19/mo at ~5 GB or always-on |
 | Cloudflare Workers | 100k req/day | Workers Paid $5/mo for Durable Objects at scale |
-| GitHub Actions | 2,000 min/mo (private) | Free for public repos |
+| GitHub Actions | Unlimited (public repo, standard runners) | Only if you opt into larger runners |
 
 **Realistic worst case for a busy first year: $25–45/mo.** The architecture is intentionally cheap on purpose.
 

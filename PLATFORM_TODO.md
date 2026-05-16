@@ -24,7 +24,7 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 
 ## Phase B — deploy online
 
-- [x] Push the repo to GitHub (`ruiboom/theatre-scout`, private)
+- [x] Push the repo to GitHub (`ruiboom/theatre-scout`, public)
 - [x] Create a Neon project (London region), enable PostGIS, copy pooled + direct URLs
 - [x] Apply `schema.sql` to Neon (current schema with `0002_align_with_scout` columns)
 - [x] Import to Vercel — root directory `platform/apps/website`, `DATABASE_URL` = pooled URL → live at <https://theatre-scout-zunz.vercel.app>

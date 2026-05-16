@@ -174,7 +174,7 @@ The admin's job is mainly:
 
 The platform has no in-app feedback. If something is wrong, route it through GitHub:
 
-- **Repo:** <https://github.com/ruiboom/theatre-scout> — note this is a **private** repository. You need to be added as a collaborator (Settings → Collaborators on the repo) to file or read issues.
+- **Repo:** <https://github.com/ruiboom/theatre-scout> — **public**, so anyone with a GitHub account can open or read issues. No collaborator invite needed.
 - **Bug in the site** → open a GitHub issue.
 - **Wrong show data** → in 99% of cases the venue's own website is wrong or the adapter is parsing it wrong. Open an issue with the venue slug and the show title; the fix is an adapter tweak.
 - **Missing venue** → propose it in an issue; we add it to `theatres.yaml` and write an adapter.

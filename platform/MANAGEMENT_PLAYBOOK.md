@@ -16,7 +16,7 @@ For developer onboarding see [SETUP.md](SETUP.md). For first-time deploy see [DE
 
 ```
    ┌─────────────────────────────────────────────────────────────────────┐
-   │  GitHub  (ruiboom/theatre-scout — private)                          │
+   │  GitHub  (ruiboom/theatre-scout — public)                           │
    │  · source of truth for all code                                     │
    │  · push to main → Vercel auto-deploys website                       │
    │  · Actions cron 05:00 UTC → runs scrape.yml → writes to Neon        │
@@ -35,7 +35,7 @@ For developer onboarding see [SETUP.md](SETUP.md). For first-time deploy see [DE
 
 | What | Where | URL |
 |------|-------|-----|
-| Source code | GitHub (private) | <https://github.com/ruiboom/theatre-scout> |
+| Source code | GitHub (public) | <https://github.com/ruiboom/theatre-scout> |
 | Scraper cron + manual trigger | GitHub Actions | <https://github.com/ruiboom/theatre-scout/actions> |
 | Public website + admin + Internal API | Vercel | <https://theatre-scout-zunz.vercel.app> |
 | Database | Neon | console at <https://console.neon.tech> |
@@ -277,10 +277,9 @@ GitHub does three jobs for this project: it stores the source code, it runs the 
 
 - **URL:** <https://github.com/ruiboom/theatre-scout>
 - **Owner:** `ruiboom`
-- **Visibility:** **Private**. The site and API are public; the source isn't. Practical implications:
-  - Issues, PRs, and the Actions log are only visible to collaborators (invite via Settings → Collaborators).
-  - GitHub Actions still gets the generous public-repo-style minutes for free on private repos at this scale — no billing impact today.
-  - If you make the repo public, double-check that nothing secret is committed (the only sensitive material is in Actions secrets, which never appear in git history, but always sanity-check before flipping the switch).
+- **Visibility:** **Public**. Source, issues, PRs, and the Actions log are all publicly readable; anyone with a GitHub account can file an issue. Practical implications:
+  - GitHub Actions on a public repo gets unlimited free standard-runner minutes — no usage quota or billing concern for the daily scrape.
+  - Because the repo is public, **nothing secret may ever be committed.** Sensitive material lives only in Actions secrets and the platforms' own secret stores — never in git history. Sanity-check any new file for credentials before committing.
 - **Default branch:** `main`. All deploys and cron runs key off `main`.
 - **Description:** "Anywhere But The West End — a multi-surface listings platform for London's 70 non-West End theatres. Scout/ is the live site; platform/ is the v2 architecture (Postgres + Internal API + Next.js + MCP server)."
 
@@ -490,8 +489,8 @@ To attach a custom domain (e.g. `anywherebutwestend.com`):
 
 | Service | Plan | Monthly cost |
 |---------|------|--------------|
-| GitHub | Free (private repo, single user) | $0 |
-| GitHub Actions | Free tier minutes; ~17 min/day × 30 = ~510 min/mo (well under the 2,000 min/mo free for private repos) | $0 |
+| GitHub | Free (public repo, single user) | $0 |
+| GitHub Actions | Public repo → unlimited free standard-runner minutes (the daily scrape is ~17 min/day) | $0 |
 | Vercel | Hobby (non-commercial) | $0 |
 | Neon | Free (0.5 GB, 1 always-on compute) | $0 |
 | Cloudflare Workers | Free (100k req/day) | $0 |
@@ -499,7 +498,7 @@ To attach a custom domain (e.g. `anywherebutwestend.com`):
 
 If the project monetises or outgrows free tiers:
 
-- **GitHub Team** $4/user/mo — only needed if you need protected branches / required reviews / etc. on a private repo. Not necessary for a one-person project.
+- **GitHub Team** $4/user/mo — not needed for a one-person project; branch protection and required reviews are free on public repos anyway.
 - **Vercel Pro** $20/mo per member (commercial use, higher limits).
 - **Neon Launch** $19/mo (more storage, more compute hours, larger branch tree).
 - **Cloudflare Workers Paid** $5/mo (10M requests included; covers any conceivable MCP usage).

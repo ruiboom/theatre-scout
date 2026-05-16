@@ -114,7 +114,7 @@ platform/
 | Scrapers (CLI) | Typer |
 | Package manager | pnpm (workspaces) — JS; uv — Python |
 | Build pipeline | Turbo |
-| Source control + CI / cron | GitHub (`ruiboom/theatre-scout`, **private**); GitHub Actions for the daily scrape |
+| Source control + CI / cron | GitHub (`ruiboom/theatre-scout`, **public**); GitHub Actions for the daily scrape |
 
 Reasoning for each choice lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

@@ -1,12 +1,15 @@
-"""Bread & Roses Theatre, Clapham — Weebly site whose /whats-on.html embeds a
-LineupNow calendar in an iframe; the real programme is only in that widget.
+"""Bread & Roses Theatre, Clapham — Weebly site whose /whats-on.html shows its
+programme only via a LineupNow calendar widget.
 
-`fetch()` does two hops: load the Weebly page, pull the LineupNow calendar URL
-out of the iframe (so we never hard-code their publishable apiKey and survive
-key rotation), then render that React app. LineupNow's styled-component class
-names are build-hashed and unstable, so `parse()` keys off the stable repeating
-text — `<title>` / "The Bread & Roses Theatre" / "From:|Next Date: <date>".
-There are no per-show links in the widget, so the listings page is canonical.
+`fetch()` does two hops. The LineupNow iframe URL is injected client-side by
+calendar-loader.js, so it is *not* in the static HTML — but the publishable
+apiKey is, in a stable `data-line-up-api-key` attribute. Hop 1 is therefore a
+cheap non-stealth fetch of the Weebly page to read that key (no hard-coded
+secret; survives rotation); we build the calendar URL and hop 2 stealth-renders
+that React app. LineupNow's styled-component class names are build-hashed and
+unstable, so `parse()` keys off the stable repeating text — `<title>` /
+"The Bread & Roses Theatre" / "From:|Next Date: <date>". There are no per-show
+links in the widget, so the listings page is canonical.
 
 Mirrors scout/adapters/bread_and_roses.py.
 """
@@ -24,7 +27,7 @@ from ..text import clean_text
 from .base import BaseAdapter, _ClientLike
 from .registry import register
 
-_LINEUPNOW_RE = re.compile(r"https://calendar\.lineupnow\.com/?\?apiKey=[A-Za-z0-9_]+")
+_APIKEY_RE = re.compile(r'data-line-up-api-key="(pk_live_[A-Za-z0-9]+)"')
 _VENUE = "the bread & roses theatre"
 _DATE_RE = re.compile(r"(?:From|Next Date):\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})")
 
@@ -46,10 +49,9 @@ def _parse_date(text: str) -> date | None:
 class BreadAndRosesAdapter(BaseAdapter):
     slug = "bread-and-roses"
     url = "https://www.breadandrosestheatre.co.uk/whats-on.html"
-    # The Weebly page is static HTML — the LineupNow iframe URL is in the
-    # source, so hop 1 needs no browser; only the LineupNow render (hop 2) is
-    # stealth. requires_js stays False so enrich doesn't stealth-render the
-    # (shared) listings URL once per show.
+    # Hop 1 is plain HTTP (the apiKey lives in a static data attribute); only
+    # the LineupNow render (hop 2) needs a browser. requires_js stays False so
+    # enrich doesn't stealth-render the (shared) listings URL once per show.
     requires_js = False
 
     def fetch(self, client: _ClientLike) -> list[Show]:
@@ -59,16 +61,17 @@ class BreadAndRosesAdapter(BaseAdapter):
         page_html = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
             "utf-8", errors="replace"
         )
-        m = _LINEUPNOW_RE.search(page_html)
+        m = _APIKEY_RE.search(page_html)
         if m is None:
             return []
-        cal = client.get(m.group(0), stealth=True)
+        cal_url = f"https://calendar.lineupnow.com?apiKey={m.group(1)}"
+        cal = client.get(cal_url, stealth=True)
         if cal is None:
             return []
         cal_html = getattr(cal, "text", "") or getattr(cal, "content", b"").decode(
             "utf-8", errors="replace"
         )
-        return self.parse(cal_html, m.group(0))
+        return self.parse(cal_html, cal_url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:
         lines = [

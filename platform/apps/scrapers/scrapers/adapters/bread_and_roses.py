@@ -46,10 +46,14 @@ def _parse_date(text: str) -> date | None:
 class BreadAndRosesAdapter(BaseAdapter):
     slug = "bread-and-roses"
     url = "https://www.breadandrosestheatre.co.uk/whats-on.html"
-    requires_js = True
+    # The Weebly page is static HTML — the LineupNow iframe URL is in the
+    # source, so hop 1 needs no browser; only the LineupNow render (hop 2) is
+    # stealth. requires_js stays False so enrich doesn't stealth-render the
+    # (shared) listings URL once per show.
+    requires_js = False
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        resp = client.get(self.url, stealth=self.requires_js)
+        resp = client.get(self.url, stealth=False)
         if resp is None:
             return []
         page_html = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(

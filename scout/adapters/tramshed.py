@@ -1,15 +1,20 @@
-"""Tramshed, Woolwich — comedy & music venue on a Wix site (JS-rendered, so
-requires_js). On /whatson each production is a section whose heading carries
-the show title; bookings go through a single Ticket Tailor store (no per-show
-URL), so the listings page is the canonical link. Comedy-leaning programme, so
-that is the classification fallback.
+"""Tramshed, Woolwich — comedy & music venue on a Wix site. On /whatson each
+production is a section whose heading carries the show title; bookings go
+through a single Ticket Tailor store (no per-show URL), so the listings page
+is the canonical link. Comedy-leaning programme, so that is the
+classification fallback.
+
+`requires_js` is deliberately False with a stealth-forcing `fetch()` override
+— see scout/adapters/barons_court.py for the rationale (every show shares the
+listings URL, so leaving requires_js=True would stealth-render it once per
+show during enrich).
 """
 
 from __future__ import annotations
 
 from scrapling.parser import Selector
 
-from scout.adapters.base import BaseAdapter
+from scout.adapters.base import BaseAdapter, _ClientLike
 from scout.adapters.registry import register
 from scout.classify import classify
 from scout.models import Show
@@ -43,7 +48,16 @@ _SKIP = {
 class TramshedAdapter(BaseAdapter):
     slug = "tramshed"
     url = "https://www.tramshed.org/whatson"
-    requires_js = True
+    requires_js = False  # stealth forced in fetch(); keeps enrich cheap
+
+    def fetch(self, client: _ClientLike) -> list[Show]:
+        resp = client.get(self.url, stealth=True)
+        if resp is None:
+            return []
+        text = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
+            "utf-8", errors="replace"
+        )
+        return self.parse(text, self.url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:
         page = Selector(html)

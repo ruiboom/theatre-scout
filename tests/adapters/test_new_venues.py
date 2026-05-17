@@ -1,19 +1,16 @@
-"""Coverage for the remaining May-2026 venue additions.
+"""Coverage for the May-2026 venue additions.
 
 `arts-theatre`, `backyard-comedy-club` and `blue-elephant` are clean
-GenericAdapter bulk entries with deterministic fixtures, so they get real
-assertions. The five JavaScript-rendered / bot-blocked venues
-(`barons-court`, `bread-and-roses`, `hope-theatre`, `space-theatre`,
-`tramshed`) are intentionally best-effort: from the static fixture they may
-legitimately return nothing, so we only assert that parsing never raises and
-that any show it *does* return is well-formed.
+GenericAdapter bulk entries. `barons-court`, `hope-theatre`, `tramshed` and
+`bread-and-roses` are JS-rendered; their fixtures are the *stealth-rendered*
+DOM (Wix / LineupNow), so they now get real assertions. Only `space-theatre`
+stays best-effort — it sits behind Incapsula and is intentionally HTTP-only,
+so it may legitimately return nothing.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-
-import pytest
 
 from scout import adapters
 
@@ -51,13 +48,51 @@ def test_blue_elephant_has_shows() -> None:
         assert str(s.url).startswith("https://blueelephanttheatre.co.uk/"), s.url
 
 
-@pytest.mark.parametrize(
-    "slug",
-    ["barons-court", "bread-and-roses", "hope-theatre", "space-theatre", "tramshed"],
-)
-def test_js_best_effort_never_raises_and_is_well_formed(slug: str) -> None:
-    shows = _parse(slug)
+def test_barons_court_lists_productions() -> None:
+    shows = _parse("barons-court")
+    assert len(shows) >= 5
+    for s in shows:
+        assert s.title.strip() and len(s.title) <= 200
+        assert str(s.url).startswith("https://www.baronscourttheatre.com/"), s.url
+        # Nav pages must be filtered out.
+        assert (
+            not str(s.url)
+            .rstrip("/")
+            .endswith(("/about", "/contact", "/box-office", "/upcoming-performances"))
+        ), s.url
+    assert len({str(s.url) for s in shows}) == len(shows), "URLs must be unique"
+
+
+def test_hope_theatre_pairs_titles_with_show_pages() -> None:
+    shows = _parse("hope-theatre")
+    assert len(shows) >= 2
+    for s in shows:
+        assert s.title.strip()
+        assert str(s.url).startswith("https://www.thehopetheatre.com/"), s.url
+        assert not str(s.url).rstrip("/").endswith("what-s-on"), s.url
+
+
+def test_tramshed_titles_default_comedy() -> None:
+    shows = _parse("tramshed")
+    assert len(shows) >= 3
+    assert all(s.show_type == "comedy" for s in shows), [(s.title, s.show_type) for s in shows]
+    assert all(str(s.url) == "https://www.tramshed.org/whatson" for s in shows)
+
+
+def test_bread_and_roses_parses_lineupnow() -> None:
+    shows = _parse("bread-and-roses")
+    assert len(shows) >= 8
+    # The widget exposes real dates — most rows should carry a start_date.
+    assert sum(1 for s in shows if s.start_date is not None) >= len(shows) // 2
+    for s in shows:
+        assert s.title.strip() and len(s.title) <= 200
+        assert str(s.url) == "https://www.breadandrosestheatre.co.uk/whats-on.html"
+
+
+def test_space_theatre_best_effort_never_raises() -> None:
+    # Incapsula-gated, HTTP-only by design: must not raise, may be empty.
+    shows = _parse("space-theatre")
     assert isinstance(shows, list)
     for s in shows:
-        assert s.title and s.title.strip(), slug
-        assert str(s.url).startswith(("http://", "https://")), (slug, s.url)
+        assert s.title and s.title.strip()
+        assert str(s.url).startswith(("http://", "https://"))

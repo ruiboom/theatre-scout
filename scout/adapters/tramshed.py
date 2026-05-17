@@ -1,16 +1,42 @@
-"""Tramshed, Woolwich — comedy & music venue on a Wix site that sells through
-Ticket Tailor. The /whatson page renders client-side, so we fetch with the
-stealth browser and use the shared JS-listings helper, accepting both Wix
-`/event-details/` and Ticket Tailor links. Comedy-leaning programme, so that
-is the classification fallback. Best-effort.
+"""Tramshed, Woolwich — comedy & music venue on a Wix site (JS-rendered, so
+requires_js). On /whatson each production is a section whose heading carries
+the show title; bookings go through a single Ticket Tailor store (no per-show
+URL), so the listings page is the canonical link. Comedy-leaning programme, so
+that is the classification fallback.
 """
 
 from __future__ import annotations
 
-from scout.adapters._jslisting import parse_js_listings
+from scrapling.parser import Selector
+
 from scout.adapters.base import BaseAdapter
 from scout.adapters.registry import register
+from scout.classify import classify
 from scout.models import Show
+from scout.text import clean_text
+
+# Headings that are page furniture, not shows.
+_SKIP = {
+    "what's on",
+    "what’s on",
+    "whats on",
+    "tramshed",
+    "home",
+    "about",
+    "about us",
+    "contact",
+    "contact us",
+    "get in touch",
+    "book now",
+    "tickets",
+    "newsletter",
+    "sign up",
+    "find us",
+    "opening hours",
+    "our programme",
+    "support us",
+    "hire",
+}
 
 
 @register
@@ -20,10 +46,26 @@ class TramshedAdapter(BaseAdapter):
     requires_js = True
 
     def parse(self, html: str, base_url: str) -> list[Show]:
-        return parse_js_listings(
-            html,
-            base_url,
-            self.slug,
-            default_type="comedy",
-            href_contains=("/event-details/", "tickettailor.com"),
-        )
+        page = Selector(html)
+        seen: set[str] = set()
+        shows: list[Show] = []
+        for h in page.css("h1, h2, h3, h4"):
+            title = clean_text(h.get_all_text(separator=" ", strip=True))
+            key = title.lower()
+            if not title or len(title) < 3 or len(title) > 120:
+                continue
+            if key in _SKIP or key in seen:
+                continue
+            try:
+                shows.append(
+                    Show(
+                        theatre_slug=self.slug,
+                        title=title,
+                        show_type=classify(title, default="comedy"),
+                        url=self.url,
+                    )
+                )
+                seen.add(key)
+            except Exception:
+                continue
+        return shows

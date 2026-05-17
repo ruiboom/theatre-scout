@@ -29,15 +29,21 @@ def load_all() -> None:
     from . import (
         almeida,  # noqa: F401
         arcola,  # noqa: F401
+        barons_court,  # noqa: F401
+        battersea_arts_centre,  # noqa: F401
         bloomsbury,  # noqa: F401
+        bread_and_roses,  # noqa: F401
         bulk,
+        canal_cafe,  # noqa: F401
         charing_cross,  # noqa: F401
         churchill,  # noqa: F401
+        courtyard,  # noqa: F401
         donmar_warehouse,  # noqa: F401
         drayton_arms,  # noqa: F401
         etcetera,  # noqa: F401
         eventim_apollo,  # noqa: F401
         hackney_empire,  # noqa: F401
+        hope_theatre,  # noqa: F401
         lyric_hammersmith,  # noqa: F401
         marylebone,  # noqa: F401
         new_wimbledon,  # noqa: F401
@@ -52,7 +58,9 @@ def load_all() -> None:
         royal_court,  # noqa: F401
         sadlers_wells,  # noqa: F401
         soho_theatre,  # noqa: F401
+        space_theatre,  # noqa: F401
         tower,  # noqa: F401
+        tramshed,  # noqa: F401
         troubadour_canary_wharf,  # noqa: F401
         troubadour_wembley_park,  # noqa: F401
         union,  # noqa: F401

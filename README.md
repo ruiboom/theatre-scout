@@ -1,8 +1,8 @@
 # Theatre Scout
 
-A local Python app that scrapes 68 London theatres outside the West End and serves a searchable directory of current and upcoming shows — plays, musicals, comedy, dance, opera, family shows. Browse it at `http://localhost:8000` after a one-line scrape.
+A local Python app that scrapes 80 London theatres outside the West End and serves a searchable directory of current and upcoming shows — plays, musicals, comedy, dance, opera, family shows. Browse it at `http://localhost:8000` after a one-line scrape.
 
-**Current scope:** 68 registered venues, 55 returning shows on the last run, ~1,000 upcoming productions in the database.
+**Current scope:** 80 registered venues, 55 returning shows on the last run, ~1,000 upcoming productions in the database.
 
 ---
 
@@ -175,7 +175,7 @@ scout --help
 
 ```
 theatre-scout/
-├── theatres.yaml                 # 68 venues — single source of truth
+├── theatres.yaml                 # 80 venues — single source of truth
 ├── theatre-coords.yaml           # optional geocoded lat/lon for the venue map
 ├── pyproject.toml                # uv-managed dependencies
 ├── README.md                     # this file
@@ -290,8 +290,8 @@ Uniqueness: `(theatre_slug, title, COALESCE(start_date, ''))`. Re-runs upsert by
 ### Categories (in `theatres.yaml`)
 
 - `major` (18) — Almeida, Bridge, Bush, Donmar, Hampstead, Kiln, Lyric Hammersmith, Menier, National, Old Vic, Open Air, Orange Tree, Royal Court, Sadler's Wells, Shakespeare's Globe, Soho, Theatre Royal Stratford East, Young Vic
-- `mid` (19) — Arcola, Barbican, Brixton House, Charing Cross, Coronet, Gate, Hackney Empire, Marylebone, New Diorama, Park, Pleasance, Riverside Studios, Roundhouse, Seven Dials, The Other Palace, The Yard, Underbelly Boulevard, Unicorn, Wilton's
-- `fringe` (19) — Camden People's, Cockpit, Drayton Arms, Etcetera, Finborough, Hen & Chickens, Jermyn Street, King's Head, Old Red Lion, Omnibus, Southwark Playhouse, Tabard, Tara, The Vaults, Tower, Union, Upstairs at the Gatehouse, Waterloo East, White Bear
+- `mid` (21) — Arcola, Arts Theatre, Barbican, Battersea Arts Centre, Brixton House, Charing Cross, Coronet, Gate, Hackney Empire, Marylebone, New Diorama, Park, Pleasance, Riverside Studios, Roundhouse, Seven Dials, The Other Palace, The Yard, Underbelly Boulevard, Unicorn, Wilton's
+- `fringe` (29) — Backyard Comedy Club, Barons Court, Blue Elephant, Bread & Roses, Camden People's, Canal Cafe, Cockpit, Courtyard, Drayton Arms, Etcetera, Finborough, Hen & Chickens, The Hope, Jermyn Street, King's Head, Old Red Lion, Omnibus, Southwark Playhouse, The Space, Tabard, Tara, Theatre503, The Vaults, Tower, Tramshed, Union, Upstairs at the Gatehouse, Waterloo East, White Bear
 - `outer` (12) — Alexandra Palace, Bloomsbury, Churchill, Eventim Apollo, Greenwich, New Wimbledon, Polka, Queen's Hornchurch, Richmond, Rose Kingston, Troubadour Canary Wharf, Troubadour Wembley Park
 
 ---

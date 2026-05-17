@@ -11,8 +11,8 @@ from scout.theatres import load
 
 YAML_PATH = Path(__file__).resolve().parent.parent / "theatres.yaml"
 
-EXPECTED_TOTAL = 68
-EXPECTED_COUNTS = {"major": 18, "mid": 19, "fringe": 19, "outer": 12}
+EXPECTED_TOTAL = 80
+EXPECTED_COUNTS = {"major": 18, "mid": 21, "fringe": 29, "outer": 12}
 
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 POSTCODE_RE = re.compile(r"^[A-Z]{1,2}\d{1,2}[A-Z]?$")

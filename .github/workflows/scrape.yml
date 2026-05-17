@@ -2,7 +2,7 @@ name: Daily scrape
 
 # Daily refresh of the platform DB:
 #   1. Sync venues from theatres.yaml (idempotent — schema changes only).
-#   2. Run platform's own scrapers across all 68 adapters, writing direct to
+#   2. Run platform's own scrapers across all 80 adapters, writing direct to
 #      Neon. 3-phase pipeline (serial listings → parallel enrich → writes).
 #   3. Smoke-test the live API to confirm the count is sensible.
 #

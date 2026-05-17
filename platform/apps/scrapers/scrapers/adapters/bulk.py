@@ -26,6 +26,7 @@ _JS_VENUES: set[str] = {
 # fallback default — JSON-LD type, site genre and title keywords (steps D and
 # C) all still take precedence, so genuine plays/musicals here stay correct.
 _DEFAULT_SHOW_TYPE: dict[str, ShowType] = {
+    "backyard-comedy-club": "comedy",
     "hen-and-chickens": "comedy",
     "underbelly-boulevard": "comedy",
 }
@@ -48,6 +49,8 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ),
     ("young-vic", "https://www.youngvic.org/whats-on", 'a[href*="/whats-on/"]'),
     # --- mid ---
+    # artstheatrewestend.co.uk 301-redirects to the venue's current site.
+    ("arts-theatre", "https://www.artsatmarblearch.com/events", ".c-event-card"),
     ("barbican", "https://www.barbican.org.uk/whats-on", 'a[href*="/whats-on/"]'),
     ("brixton-house", "https://brixtonhouse.co.uk/whats-on/", "li[class*=show]"),
     ("coronet", "https://www.thecoronettheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
@@ -64,6 +67,8 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("unicorn", "https://www.unicorntheatre.com/whats-on/", 'a[href*="/events/"]'),
     ("wiltons", "https://wiltons.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
     # --- fringe ---
+    ("backyard-comedy-club", "https://backyardcomedyclub.co.uk/events/", 'a[href*="/event/"]'),
+    ("blue-elephant", "https://blueelephanttheatre.co.uk/whatson", "div.contentblock"),
     ("camden-peoples", "https://cptheatre.co.uk/whats-on", ".event"),
     ("cockpit", "https://www.thecockpit.org.uk/", 'a[href*="/show/"]'),
     ("finborough", "https://www.finboroughtheatre.co.uk/productions", 'a[href*="/productions/"]'),
@@ -73,6 +78,7 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("southwark-playhouse", "https://southwarkplayhouse.co.uk/", 'a[href*="/productions/"]'),
     ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
+    ("theatre503", "https://theatre503.com/whats-on/", ".listing"),
     # --- outer ---
     ("alexandra-palace", "https://www.alexandrapalace.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("greenwich", "https://greenwichtheatre.org.uk/whats-on/", 'a[href*="/events/"]'),

@@ -6,6 +6,7 @@ load_all()
 def test_comedy_venue_default_show_type():
     # Stand-up-dominant venues fall back to comedy when JSON-LD, site genre
     # and title keywords are all silent.
+    assert get_adapter("backyard-comedy-club").default_show_type == "comedy"
     assert get_adapter("hen-and-chickens").default_show_type == "comedy"
     assert get_adapter("underbelly-boulevard").default_show_type == "comedy"
 

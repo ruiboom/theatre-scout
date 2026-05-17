@@ -1,10 +1,15 @@
-"""Barons Court Theatre — hand-built Wix site (JS-rendered, so requires_js).
-
-The programme lives at /upcoming-performances, where each production is a
+"""Barons Court Theatre — hand-built Wix site. The programme lives at
+/upcoming-performances, where each production is a
 `<a data-testid="linkElement" href="https://www.baronscourttheatre.com/<slug>">`
 whose link text is the show title. Wix auto-generates CSS class hashes, so we
 anchor on the stable `data-testid` + the venue's own per-show URLs, filtering
 out the fixed set of nav/utility pages.
+
+`requires_js` is deliberately False with a stealth-forcing `fetch()` override:
+the listing genuinely needs a browser render, but leaving `requires_js=True`
+would also make the enrich phase stealth-render every per-show page (11+
+serialised browser renders that blew the scrape's job timeout). Decoupling the
+two keeps listings correct while enrich falls back to a cheap HTTP fetch.
 
 Mirrors scout/adapters/barons_court.py.
 """
@@ -18,7 +23,7 @@ from scrapling.parser import Selector
 from ..classify import classify
 from ..models import Show
 from ..text import clean_text
-from .base import BaseAdapter
+from .base import BaseAdapter, _ClientLike
 from .registry import register
 
 # Non-show pages reachable from the same `linkElement` anchors.
@@ -39,7 +44,16 @@ _NAV = {
 class BaronsCourtAdapter(BaseAdapter):
     slug = "barons-court"
     url = "https://www.baronscourttheatre.com/upcoming-performances"
-    requires_js = True
+    requires_js = False  # see module docstring — stealth forced in fetch()
+
+    def fetch(self, client: _ClientLike) -> list[Show]:
+        resp = client.get(self.url, stealth=True)
+        if resp is None:
+            return []
+        text = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
+            "utf-8", errors="replace"
+        )
+        return self.parse(text, self.url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:
         page = Selector(html)

@@ -1,18 +1,20 @@
-"""The Hope Theatre, Islington — Wix site (JS-rendered, so requires_js).
+"""The Hope Theatre, Islington — Wix site. Each show on /what-s-on is a
+hand-placed Wix block: a 22px rich-text heading (title), a 20px heading
+(date), then an "INFORMATION" button linking to the show's own page
+(thehopetheatre.com/<slug>) and a "TICKETS" button to TicketSource. Wix class
+names are hashed, so we key off the stable `aria-label="INFORMATION"` anchors
+and the template's inline title font-size, pairing them in document order.
 
-Each show on /what-s-on is a hand-placed Wix block: a 22px rich-text heading
-(title), a 20px heading (date), then an "INFORMATION" button linking to the
-show's own page (thehopetheatre.com/<slug>) and a "TICKETS" button to
-TicketSource. Wix class names are hashed, so we key off the stable
-`aria-label="INFORMATION"` anchors and the template's inline title font-size,
-pairing them in document order.
+`requires_js` is deliberately False with a stealth-forcing `fetch()` override
+— see scout/adapters/barons_court.py for the rationale (avoids stealth-
+rendering every per-show page during enrich).
 """
 
 from __future__ import annotations
 
 from scrapling.parser import Selector
 
-from scout.adapters.base import BaseAdapter
+from scout.adapters.base import BaseAdapter, _ClientLike
 from scout.adapters.registry import register
 from scout.classify import classify
 from scout.models import Show
@@ -23,7 +25,16 @@ from scout.text import clean_text
 class HopeTheatreAdapter(BaseAdapter):
     slug = "hope-theatre"
     url = "https://www.thehopetheatre.com/what-s-on"
-    requires_js = True
+    requires_js = False  # stealth forced in fetch(); keeps enrich cheap
+
+    def fetch(self, client: _ClientLike) -> list[Show]:
+        resp = client.get(self.url, stealth=True)
+        if resp is None:
+            return []
+        text = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
+            "utf-8", errors="replace"
+        )
+        return self.parse(text, self.url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:
         page = Selector(html)

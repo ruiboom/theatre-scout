@@ -33,7 +33,10 @@ jobs:
   scrape:
     name: Scrape → Neon
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 was tight once real JS venues (Wix/LineupNow stealth renders) landed
+    # and a run was cancelled mid-write. 75 gives headroom; the bigger lever
+    # is keeping enrich off the stealth path (see adapters/barons_court.py).
+    timeout-minutes: 75
 
     defaults:
       run:

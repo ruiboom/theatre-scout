@@ -128,7 +128,7 @@
   category: major
   url: https://youngvic.org
 
-# --- Mid-sized & specialist venues (19) ---
+# --- Mid-sized & specialist venues (21) ---
 - slug: arcola
   name: Arcola Theatre
   area: Dalston
@@ -136,12 +136,26 @@
   category: mid
   url: https://arcolatheatre.com
 
+- slug: arts-theatre
+  name: Arts Theatre
+  area: Leicester Square
+  postcode_prefix: WC2
+  category: mid
+  url: https://artstheatrewestend.co.uk
+
 - slug: barbican
   name: Barbican Centre
   area: Barbican
   postcode_prefix: EC2
   category: mid
   url: https://barbican.org.uk
+
+- slug: battersea-arts-centre
+  name: Battersea Arts Centre
+  area: Battersea
+  postcode_prefix: SW11
+  category: mid
+  url: https://bac.org.uk
 
 - slug: brixton-house
   name: Brixton House
@@ -262,7 +276,35 @@
   category: mid
   url: https://wiltons.org.uk
 
-# --- Fringe & pub theatres (19) ---
+# --- Fringe & pub theatres (29) ---
+- slug: backyard-comedy-club
+  name: Backyard Comedy Club
+  area: Bethnal Green
+  postcode_prefix: E2
+  category: fringe
+  url: https://backyardcomedyclub.co.uk
+
+- slug: barons-court
+  name: Barons Court Theatre
+  area: Barons Court
+  postcode_prefix: W14
+  category: fringe
+  url: https://www.baronscourttheatre.com
+
+- slug: blue-elephant
+  name: Blue Elephant Theatre
+  area: Camberwell
+  postcode_prefix: SE5
+  category: fringe
+  url: https://blueelephanttheatre.co.uk
+
+- slug: bread-and-roses
+  name: Bread & Roses Theatre
+  area: Clapham
+  postcode_prefix: SW4
+  category: fringe
+  url: https://breadandrosestheatre.co.uk
+
 - slug: camden-peoples
   name: Camden People's Theatre
   area: Euston
@@ -270,12 +312,26 @@
   category: fringe
   url: https://cptheatre.co.uk
 
+- slug: canal-cafe
+  name: Canal Cafe Theatre
+  area: Little Venice
+  postcode_prefix: W2
+  category: fringe
+  url: https://canalcafetheatre.com
+
 - slug: cockpit
   name: Cockpit Theatre
   area: Marylebone
   postcode_prefix: NW8
   category: fringe
   url: https://thecockpit.org.uk
+
+- slug: courtyard
+  name: Courtyard Theatre
+  area: Hoxton
+  postcode_prefix: N1
+  category: fringe
+  url: https://thecourtyard.org.uk
 
 - slug: drayton-arms
   name: Drayton Arms Theatre
@@ -304,6 +360,13 @@
   postcode_prefix: N1
   category: fringe
   url: https://henandchickens.com
+
+- slug: hope-theatre
+  name: The Hope Theatre
+  area: Islington
+  postcode_prefix: N1
+  category: fringe
+  url: https://thehopetheatre.com
 
 - slug: jermyn-street
   name: Jermyn Street Theatre
@@ -340,6 +403,13 @@
   category: fringe
   url: https://southwarkplayhouse.co.uk
 
+- slug: space-theatre
+  name: The Space
+  area: Isle of Dogs
+  postcode_prefix: E14
+  category: fringe
+  url: https://space.org.uk
+
 - slug: tabard
   name: Tabard Theatre
   area: Chiswick
@@ -354,6 +424,13 @@
   category: fringe
   url: https://taratheatre.com
 
+- slug: theatre503
+  name: Theatre503
+  area: Battersea
+  postcode_prefix: SW11
+  category: fringe
+  url: https://theatre503.com
+
 - slug: vaults
   name: The Vaults
   area: Waterloo
@@ -367,6 +444,13 @@
   postcode_prefix: N16
   category: fringe
   url: https://towertheatre.org.uk
+
+- slug: tramshed
+  name: Tramshed
+  area: Woolwich
+  postcode_prefix: SE18
+  category: fringe
+  url: https://tramshed.org
 
 - slug: union
   name: Union Theatre

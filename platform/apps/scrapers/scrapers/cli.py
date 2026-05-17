@@ -1,9 +1,9 @@
 """`scrape` CLI. Mirrors scout's flag set so muscle memory ports across.
 
-    scrape list                                              list registered adapters
-    scrape venue <slug> [--enrich] [--replace] [--workers N] one venue
-    scrape all          [--enrich] [--replace] [--workers N] every venue
-    scrape sync-venues <theatres.yaml>                       upsert venues from YAML
+scrape list                                              list registered adapters
+scrape venue <slug> [--enrich] [--replace] [--workers N] one venue
+scrape all          [--enrich] [--replace] [--workers N] every venue
+scrape sync-venues <theatres.yaml>                       upsert venues from YAML
 """
 
 from __future__ import annotations
@@ -81,13 +81,44 @@ def scrape_all(
 
 @app.command("sync-venues")
 def sync_venues(yaml_path: Path) -> None:
-    """Upsert venues from a theatres.yaml file (same format as scout's)."""
+    """Upsert venues from a theatres.yaml file (same format as scout's).
+
+    Also reads the sibling `theatre-coords.yaml` so venue map coordinates flow
+    to the live site through the normal daily sync — not just the one-shot
+    scout ETL. (This is the path that was missing: new venues had no `location`
+    until it was wired here.)
+    """
     _setup_logging()
     with yaml_path.open() as f:
         data = yaml.safe_load(f) or []
     theatres = [Theatre(**row) for row in data]
-    n = upsert_theatres(theatres)
-    typer.echo(f"Upserted {n} venues from {yaml_path}")
+    coords = _load_coords(yaml_path.parent / "theatre-coords.yaml")
+    n = upsert_theatres(theatres, coords)
+    typer.echo(f"Upserted {n} venues from {yaml_path} ({len(coords)} with coords)")
+
+
+def _load_coords(path: Path) -> dict[str, tuple[float, float]]:
+    """slug -> (lat, lon) from theatre-coords.yaml. Missing file -> {}.
+
+    Tolerates both the `{lat, lon}` mapping form scout writes and a bare
+    `[lat, lon]` list, mirroring scripts/etl_from_scout.py.
+    """
+    if not path.exists():
+        return {}
+    with path.open() as f:
+        raw = yaml.safe_load(f) or {}
+    out: dict[str, tuple[float, float]] = {}
+    for slug, val in raw.items():
+        if isinstance(val, dict):
+            lat = val.get("lat")
+            lon = val.get("lon")
+            if lon is None:
+                lon = val.get("lng")
+            if lat is not None and lon is not None:
+                out[slug] = (float(lat), float(lon))
+        elif isinstance(val, (list, tuple)) and len(val) == 2:
+            out[slug] = (float(val[0]), float(val[1]))
+    return out
 
 
 def _setup_logging() -> None:

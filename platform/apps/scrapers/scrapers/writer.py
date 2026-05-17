@@ -16,7 +16,7 @@ import hashlib
 import json
 import logging
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
 import psycopg
 
@@ -36,24 +36,68 @@ def _conn() -> psycopg.Connection:
 # ---- venues -----------------------------------------------------------------
 
 
-def upsert_theatres(theatres: Iterable[Theatre]) -> int:
-    """Idempotent venue upsert. Run once at startup, before any show writes."""
+def upsert_theatres(
+    theatres: Iterable[Theatre],
+    coords: Mapping[str, tuple[float, float]] | None = None,
+) -> int:
+    """Idempotent venue upsert. Run once at startup, before any show writes.
+
+    `coords` maps slug -> (lat, lon) (from theatre-coords.yaml). When a slug has
+    coords we also write the PostGIS `location` point — and refresh it on
+    conflict so the documented "add a venue" flow (theatres.yaml +
+    theatre-coords.yaml -> sync-venues) carries map coordinates all the way to
+    the live site. A slug with no coords leaves any existing `location`
+    untouched (the UPDATE simply omits the column), so this never wipes a point.
+    """
+    coords = coords or {}
     n = 0
     with _conn() as conn, conn.cursor() as cur:
         for t in theatres:
-            cur.execute(
-                """
-                INSERT INTO venues (slug, name, neighbourhood, postcode_prefix, category, website)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (slug) DO UPDATE SET
-                    name             = EXCLUDED.name,
-                    neighbourhood    = EXCLUDED.neighbourhood,
-                    postcode_prefix  = EXCLUDED.postcode_prefix,
-                    category         = EXCLUDED.category,
-                    website          = EXCLUDED.website
-                """,
-                (t.slug, t.name, t.area, t.postcode_prefix, t.category, str(t.url)),
-            )
+            lat_lon = coords.get(t.slug)
+            if lat_lon is None:
+                cur.execute(
+                    """
+                    INSERT INTO venues
+                      (slug, name, neighbourhood, postcode_prefix, category, website)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (slug) DO UPDATE SET
+                        name             = EXCLUDED.name,
+                        neighbourhood    = EXCLUDED.neighbourhood,
+                        postcode_prefix  = EXCLUDED.postcode_prefix,
+                        category         = EXCLUDED.category,
+                        website          = EXCLUDED.website
+                    """,
+                    (t.slug, t.name, t.area, t.postcode_prefix, t.category, str(t.url)),
+                )
+            else:
+                lat, lon = lat_lon
+                cur.execute(
+                    """
+                    INSERT INTO venues
+                      (slug, name, neighbourhood, postcode_prefix, category, website,
+                       location)
+                    VALUES
+                      (%s, %s, %s, %s, %s, %s,
+                       ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography)
+                    ON CONFLICT (slug) DO UPDATE SET
+                        name             = EXCLUDED.name,
+                        neighbourhood    = EXCLUDED.neighbourhood,
+                        postcode_prefix  = EXCLUDED.postcode_prefix,
+                        category         = EXCLUDED.category,
+                        website          = EXCLUDED.website,
+                        location         = EXCLUDED.location
+                    """,
+                    (
+                        t.slug,
+                        t.name,
+                        t.area,
+                        t.postcode_prefix,
+                        t.category,
+                        str(t.url),
+                        lon,  # ST_MakePoint(x=lon, y=lat)
+                        lat,
+                    ),
+                )
             n += 1
         conn.commit()
     return n
@@ -136,8 +180,8 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
                     venue_id,
                     s.title,
                     s.show_type,
-                    s.description,                         # short
-                    s.description_full or s.description,   # full ≥ short
+                    s.description,  # short
+                    s.description_full or s.description,  # full ≥ short
                     s.price_min,
                     s.price_max,
                     s.start_date,

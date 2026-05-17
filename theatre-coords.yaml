@@ -8,11 +8,11 @@ arcola:
   lat: 51.5469457
   lon: -0.074908
 arts-theatre:
-  lat: 51.5114
-  lon: -0.128
+  lat: 51.5120959
+  lon: -0.1275501
 backyard-comedy-club:
-  lat: 51.5283
-  lon: -0.0566
+  lat: 51.5253332
+  lon: -0.0554864
 barbican:
   lat: 51.5206514
   lon: -0.0938065
@@ -20,14 +20,14 @@ barons-court:
   lat: 51.4889
   lon: -0.2106
 battersea-arts-centre:
-  lat: 51.4646
-  lon: -0.1627
+  lat: 51.4649605
+  lon: -0.1607853
 bloomsbury:
   lat: 51.525044
   lon: -0.1328141
 blue-elephant:
-  lat: 51.4776
-  lon: -0.0938
+  lat: 51.4800484
+  lon: -0.0983402
 bread-and-roses:
   lat: 51.4637
   lon: -0.1381
@@ -44,8 +44,8 @@ camden-peoples:
   lat: 51.5263814
   lon: -0.1384024
 canal-cafe:
-  lat: 51.5229
-  lon: -0.1856
+  lat: 51.5210488
+  lon: -0.1842895
 charing-cross:
   lat: 51.5076633
   lon: -0.1243661
@@ -59,8 +59,8 @@ coronet:
   lat: 51.5085433
   lon: -0.198132
 courtyard:
-  lat: 51.529
-  lon: -0.0823
+  lat: 51.5279838
+  lon: -0.0833863
 donmar-warehouse:
   lat: 51.5139417
   lon: -0.1257733
@@ -92,8 +92,8 @@ hen-and-chickens:
   lat: 51.5460243
   lon: -0.1019468
 hope-theatre:
-  lat: 51.5403
-  lon: -0.1029
+  lat: 51.5404
+  lon: -0.1028
 jermyn-street:
   lat: 51.5091877
   lon: -0.1349199
@@ -182,8 +182,8 @@ southwark-playhouse:
   lat: 51.4924234
   lon: -0.1027851
 space-theatre:
-  lat: 51.4923
-  lon: -0.0253
+  lat: 51.4921549
+  lon: -0.0242259
 tabard:
   lat: 51.4956267
   lon: -0.2548747
@@ -194,14 +194,14 @@ theatre-royal-stratford-east:
   lat: 51.5425633
   lon: 0.000963
 theatre503:
-  lat: 51.4717
-  lon: -0.166
+  lat: 51.4720009
+  lon: -0.1655748
 tower:
   lat: 51.5627976
   lon: -0.0719883
 tramshed:
-  lat: 51.4912
-  lon: 0.0681
+  lat: 51.4894756
+  lon: 0.0680071
 troubadour-canary-wharf:
   lat: 51.5047674
   lon: -0.0173118

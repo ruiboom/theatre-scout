@@ -58,6 +58,7 @@ def load_all() -> None:
         royal_court,  # noqa: F401
         sadlers_wells,  # noqa: F401
         soho_theatre,  # noqa: F401
+        southwark_playhouse,  # noqa: F401
         space_theatre,  # noqa: F401
         tower,  # noqa: F401
         tramshed,  # noqa: F401

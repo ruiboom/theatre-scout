@@ -156,7 +156,11 @@ Full list lives in [`theatres.yaml`](theatres.yaml). Counts:
   connection string is **Vercel env `DATABASE_URL`** (pooled, used by the
   website/API) and **GitHub Actions secret `NEON_DATABASE_URL`** (direct, used
   by the scraper cron — matches `.github/workflows/scrape.yml`). Rotating the
-  Neon password means updating both, then redeploying Vercel.
+  Neon password means updating both, then redeploying Vercel. **Caveat:** the repo
+  is currently connected to **two** Vercel projects — canonical `theatre-scout-zunz`
+  plus a `theatre-scout` duplicate pending removal (see
+  [`platform/MANAGEMENT_PLAYBOOK.md`](platform/MANAGEMENT_PLAYBOOK.md) §1.2). Until the
+  duplicate is gone, set `DATABASE_URL` (and any env change) on **both** projects.
 - The hosted MCP server's inbound auth is OAuth (no shared secret); provider
   state lives in the Cloudflare `OAUTH_KV` namespace.
 - `gitleaks` runs against full history; config at repo root

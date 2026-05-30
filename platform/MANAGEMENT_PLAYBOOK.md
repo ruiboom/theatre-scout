@@ -64,6 +64,19 @@ Every page is `force-dynamic` — no ISR, no edge caching. Each request hits Neo
 - **Preview deploys:** Vercel auto-generates `https://theatre-scout-zunz-git-<branch>-<scope>.vercel.app` for every branch push.
 - **Custom domain:** if/when a custom domain is attached (e.g. `anywherebutwestend.com`), add it in Vercel → Project → Settings → Domains, set `NEXT_PUBLIC_SITE_URL` to match, and update the MCP server's `API_BASE_URL` secret.
 
+> ⚠️ **Two Vercel projects deploy this repo — consolidation pending.** Alongside the
+> canonical `theatre-scout-zunz` above, a duplicate project **`theatre-scout`**
+> (<https://theatre-scout.vercel.app>) is also connected to the GitHub repo and
+> auto-deploys from `main` on every push, serving identical content. It's almost
+> certainly a second accidental import — Vercel appends the `-zunz` suffix when the
+> project name is already taken — and nothing in the repo references it. Risks: 2×
+> build minutes and **env/secret drift** (a `DATABASE_URL` rotation applied to only one
+> project leaves the other live on a stale connection string). **To fix:** confirm
+> `theatre-scout` has no custom domain or unique env vars, then disconnect or delete it
+> in the Vercel dashboard, leaving `theatre-scout-zunz` as the sole project. **Until
+> then, apply every env-var change to _both_ projects. Do not re-import the repo** —
+> that just spawns another duplicate.
+
 ### 1.3 Project settings
 
 - **Framework preset:** Next.js (auto-detected).
@@ -167,7 +180,7 @@ The free tier covers a handful of branches and the working set we use. Branch li
 | Apply migration | `psql "$DATABASE_URL_DIRECT" -f platform/packages/db/migrations/000X_*.sql` |
 | Manual query | `psql "$DATABASE_URL_DIRECT"` (use direct URL to avoid pooler quirks for interactive use) |
 | Snapshot data | Neon console → Backups (point-in-time recovery on paid; manual `pg_dump` on free) |
-| Rotate password | Console → project → Roles → reset password → update `DATABASE_URL` on Vercel and `NEON_DATABASE_URL` secret on GitHub → redeploy Vercel |
+| Rotate password | Console → project → Roles → reset password → update `DATABASE_URL` on Vercel (**both projects** until the duplicate is removed — see §1.2) and `NEON_DATABASE_URL` secret on GitHub → redeploy Vercel |
 | Inspect events / scrape status | `select * from scrape_runs order by started_at desc limit 20;` |
 
 ### 2.7 Failure modes

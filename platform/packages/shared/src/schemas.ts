@@ -43,7 +43,7 @@ const ShowTypeEnum = z.enum([
 
 const VenueCategoryEnum = z.enum(['major', 'mid', 'fringe', 'outer']);
 
-const WhenChip = z.enum(['today', 'week', 'new']);
+const WhenChip = z.enum(['today', 'week', 'new', 'closing']);
 
 export const SearchShowsInput = z.object({
   date_from: isoDate.optional(),
@@ -59,12 +59,16 @@ export const SearchShowsInput = z.object({
   category: VenueCategoryEnum.optional(),
   /** Filter by show type — heuristic-classified at scrape time. */
   show_type: ShowTypeEnum.optional(),
-  /** Web UI chip: "today" / "week" / "new". Resolves server-side to a date window. */
+  /** Web UI chip: "today" / "week" / "new" / "closing". Resolves server-side. */
   when: WhenChip.optional(),
+  /** Only shows first seen within the last N days — powers "Just Announced". */
+  first_seen_within_days: z.number().int().min(1).max(365).optional(),
+  /** Only shows whose run ends within the next N days — powers "Closing Soon". */
+  closing_within_days: z.number().int().min(1).max(365).optional(),
   /** Free-text title search. */
   q: z.string().min(1).max(200).optional(),
   /** Sort field for the list view. */
-  sort: z.enum(['start_date', 'end_date', 'title', 'venue']).optional(),
+  sort: z.enum(['start_date', 'end_date', 'title', 'venue', 'first_seen']).optional(),
   /** Sort direction. */
   dir: z.enum(['asc', 'desc']).optional(),
   limit: z.number().int().min(1).max(200).optional().default(20),

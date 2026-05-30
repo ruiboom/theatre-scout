@@ -79,7 +79,7 @@ export default async function ShowsPage({
   if (q) void trackEvent({ type: 'search', query: q });
   const filterType = pickStr(sp.type);
   const filterCat = pickStr(sp.cat) as '' | VenueCategory;
-  const filterWhen = pickStr(sp.when); // '', 'today', 'week', 'new'
+  const filterWhen = pickStr(sp.when); // '', 'today', 'week', 'new', 'closing'
   const filterDate = /^\d{4}-\d{2}-\d{2}$/.test(pickStr(sp.date))
     ? pickStr(sp.date)
     : '';
@@ -114,15 +114,42 @@ export default async function ShowsPage({
     date_from = todayIso;
     date_to = addDaysIso(todayIso, 7);
   } else if (filterWhen === 'new') {
-    // "New" means first_seen_at within the last 14 days. The query layer
-    // doesn't expose that directly yet — same default window for now, the
-    // ordering brings the most-recently-added rows up.
+    // "Just announced": first seen within 14 days (applied as a filter below).
+    // Keep a wide run window so upcoming-but-not-yet-open shows still appear.
     date_from = todayIso;
     date_to = addDaysIso(todayIso, 365);
+  } else if (filterWhen === 'closing') {
+    // "Closing soon": runs ending within the next 14 days.
+    date_from = todayIso;
+    date_to = addDaysIso(todayIso, 14);
   } else {
     date_from = todayIso;
     date_to = addDaysIso(todayIso, 365);
   }
+
+  const firstSeenWithinDays = filterWhen === 'new' ? 14 : undefined;
+  const closingWithinDays = filterWhen === 'closing' ? 14 : undefined;
+
+  // The New / Closing-soon chips imply a default ordering (newest-added /
+  // soonest-closing) unless the user picked a sort explicitly via the sort bar.
+  const explicitSort = (
+    ['start_date', 'end_date', 'title', 'venue'] as const
+  ).includes(pickStr(sp.sort) as 'start_date');
+  const querySort = explicitSort
+    ? (pickStr(sp.sort) as 'start_date' | 'end_date' | 'title' | 'venue')
+    : filterWhen === 'new'
+      ? 'first_seen'
+      : filterWhen === 'closing'
+        ? 'end_date'
+        : 'start_date';
+  const queryDir: 'asc' | 'desc' =
+    pickStr(sp.dir) === 'desc'
+      ? 'desc'
+      : pickStr(sp.dir) === 'asc'
+        ? 'asc'
+        : filterWhen === 'new'
+          ? 'desc'
+          : 'asc';
 
   let shows: Show[] = [];
   let error: string | null = null;
@@ -131,14 +158,12 @@ export default async function ShowsPage({
       q: q || undefined,
       show_type: showType,
       category: filterCat || undefined,
-      sort: (['start_date', 'end_date', 'title', 'venue'] as const).includes(
-        sortField as 'start_date',
-      )
-        ? (sortField as 'start_date')
-        : 'start_date',
-      dir: sortDir === 'desc' ? 'desc' : 'asc',
+      sort: querySort,
+      dir: queryDir,
       date_from,
       date_to,
+      first_seen_within_days: firstSeenWithinDays,
+      closing_within_days: closingWithinDays,
       limit: 200,
       min_price: 0,
     });
@@ -253,6 +278,12 @@ export default async function ShowsPage({
               >
                 New
               </Chip>
+              <Chip
+                active={filterWhen === 'closing' && !filterDate}
+                href={chipUrl({ when: 'closing', date: '' })}
+              >
+                Closing soon
+              </Chip>
               {filterDate && (
                 <span className="cal-datechip">
                   <a
@@ -356,7 +387,7 @@ export default async function ShowsPage({
               ['venue', 'Venue'],
             ] as const
           ).map(([field, label]) => {
-            const active = sortField === field;
+            const active = querySort === field;
             const nextDir = active && sortDir === 'asc' ? 'desc' : 'asc';
             return (
               <a

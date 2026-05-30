@@ -47,12 +47,50 @@ This is the milestone-level view. Step-by-step commands are in [`platform/SETUP.
 - [ ] **Refine the admin dashboard.** v0 lands the foundation (events table, server-side visit/search tracking, `/r` outbound redirect, dashboard, refresh trigger). Future work: per-day timeseries chart, geo aggregation by venue cluster, retention proxy via `ip_prefix`.
 - [ ] **User wish-lists** — let visitors mark shows they want to see; hand-roll a tiny "your list" surface with localStorage by default, optional email magic-link to persist server-side. Hooks into the `/shows` row design (a small ★ in the row gutter would fit cleanly).
 - [ ] **Standalone platform — drop the `scout/` dependency.** `platform/` now scrapes directly to Neon, but the repo still treats `scout/` as the live site. Eventually: extract `platform/` to its own repo (or just delete `scout/` once it's clear nothing references it). The remaining ties: `theatres.yaml` and `theatre-coords.yaml` at the repo root (can be moved into `platform/data/`), and the `scout/` site itself if it's still serving anyone (kill once Vercel parity is clear).
-- [ ] "New" filter chip on `/shows` should query `first_seen_at` directly (currently falls back to recent ordering)
+- [ ] "New" filter chip on `/shows` should query `first_seen_at` directly (currently falls back to recent ordering) — *folded into **Phase D / D3** below.*
 - [ ] Replace the rule-based recommender in `apps/website/lib/recommend.ts` with an Anthropic call once the tag taxonomy is rich enough
 - [ ] Email integration (Beehiiv or Buttondown) — pull "new this week" via the API on a cron
 - [ ] Social bot (Buffer + Make.com) — post new listings, throttled
 - [ ] Admin CMS — manual show entry / corrections (different scope from the analytics dashboard above)
 - [x] Pick a real name — landed on **Theatre Scout** (May 2026). Display strings, MCP server name, scraper User-Agent and docs all updated. The shortlist + rationale is preserved in [`platform/docs/POSITIONING.md`](platform/docs/POSITIONING.md) for reference.
+
+---
+
+## Phase D — new features: Punt · Health · Feeds
+
+Three additive features speced May 2026. Independent of each other; the
+recommended build order is the numbering below (fast + visible → protect the
+data → biggest surface). Full file-by-file sequencing in
+[`platform/docs/FEATURE_BUILD_PLAN.md`](platform/docs/FEATURE_BUILD_PLAN.md).
+
+### D1 — Tonight's Punt + Punt Roulette · ~½ day · no schema/API change
+
+"Take a punt" made literal: one random show from a constrained pool, presented big.
+
+- [ ] `apps/website/lib/random.ts` *(new)* — lift `sampleRandom` out of `app/shows/page.tsx`; add a seeded `pickOne(arr, seed)` (mulberry32) so a punt URL is shareable and **Spin again** is deterministic.
+- [ ] `apps/website/app/punt/page.tsx` *(new, `force-dynamic`)* — build the pool via `searchShows` (Tonight = `londonToday()`; This weekend = `resolveWindow('this_weekend')`; optional `max_price`); **post-filter** to shows whose run genuinely covers the date (drop `start_date IS NULL` — `searchShows` includes them on purpose); pick one; render with the `show-hero` / `show-still` / `spec` classes; budget + window chips; **Book ↗** (`trackedExternalHref`), **Spin again ↻** (`?s=seed+1`), **See all tonight →** (`/shows?when=today`).
+- [ ] `apps/website/app/page.tsx` — add a `Take a punt ▶` CTA in `.hero-cta`.
+- **Acceptance:** `/punt`, `/punt?max_price=15`, `/punt?when=weekend` each return one on-brand pick; `?s=N` is stable on reload while Spin again re-rolls; an empty pool shows a "widen your punt" fallback, not a dead end.
+
+### D2 — Scraper health monitor · ~1 day · catches silent adapter rot
+
+The daily smoke test only checks the **global** total (`> 100`); a single venue dropping to 0 shows after a site redesign passes unnoticed (the run still records `status='success', shows_found=0`). This flags per-venue rot.
+
+- [ ] `packages/db/migrations/0004_venue_health_view.sql` *(new)* — `CREATE VIEW venue_health` over `scrape_runs`: flag the latest run when it is `failed`, `silent-zero` (0 found vs a non-trivial 21-day baseline), `collapse` (< 30 % of median, baseline ≥ 5), or `stale` (no run > 30h). One source of truth for both consumers below; mirror into `schema.sql`; apply to local + Neon.
+- [ ] `apps/scrapers/scrapers/health.py` *(new)* + `scrape health` command (`cli.py`) — `SELECT * FROM venue_health`; table + `--json`; **exit 1 if any flagged**. Reuses `writer._conn()`.
+- [ ] `.github/workflows/scrape.yml` — add `issues: write`; run `scrape health --json` (non-failing) after the scrape; an `actions/github-script` step maintains **one rolling, self-closing issue** (label `scraper-health`) via the built-in `GITHUB_TOKEN` (no PAT needed).
+- [ ] `apps/website/lib/queries/events.ts::venueHealth()` + a "Venue health" panel on `app/admin/page.tsx` (reuse `RankedList`; red = failed/zero, amber = collapse/stale; empty = "all healthy ✓").
+- **Acceptance:** synthetic `scrape_runs` (healthy history + a latest zero) makes `scrape health` flag exactly that venue and exit 1; the rolling issue opens on anomaly and closes when clear; `/admin` shows the panel.
+
+### D3 — Just Announced / Closing Soon · ~1 day · filter chips + editorial pages
+
+Turns the daily diff into product. Supersedes the "New chip → `first_seen_at`" follow-up in Phase C.
+
+- [ ] `packages/shared/src/schemas.ts` — add `first_seen_within_days`, `closing_within_days`; extend `WhenChip` with `'closing'`; add `'first_seen'` to the `sort` enum. (MCP `search_shows` inherits the new params.)
+- [ ] `apps/website/lib/queries/shows.ts` — wire both filters into `searchShows`; add `first_seen` to `orderByFor`; add `recentlyAdded(days, limit)` (selects `first_seen_at` for the "added Nd ago" badge) and `closingSoon(days, limit)`.
+- [ ] `apps/website/app/shows/page.tsx` — replace the **stubbed** `when='new'` branch (currently a fake wide window) with `first_seen_within_days: 14`; add a `when='closing'` branch (`closing_within_days: 14`, sort `end_date`); add a **Closing soon** chip beside **New**.
+- [ ] `apps/website/components/editorial-feed.tsx` *(new)* + `app/new/page.tsx` + `app/closing/page.tsx` *(new)* — magazine layout: big art, kicker, large tracked title, dates + price, **visible `description_short`**, and a "New · added Nd ago" / "Closes in N days" badge. ~30 lines of `.feature*` CSS in `app/style.css`.
+- **Acceptance:** a show added today appears in `/new` and drops out after 14d; `/closing` excludes open-ended and already-past runs; `/shows?when=new|closing` chips work; descriptions + badges render; missing images degrade gracefully.
 
 ---
 

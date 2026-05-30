@@ -150,3 +150,35 @@ export async function scrapeStatus(): Promise<ScrapeStatus> {
     last_run_at: null,
   };
 }
+
+/**
+ * Venues the `venue_health` view flags (reason IS NOT NULL), most urgent first.
+ * Mirrors the Python `scrape health` CLI — both read the same view, the single
+ * source of truth for the thresholds. Returns [] when every venue is healthy.
+ */
+export interface VenueHealthRow {
+  venue_slug: string;
+  venue_name: string | null;
+  latest_status: string | null;
+  latest_found: number | null;
+  median_found: number;
+  max_found: number;
+  reason: string;
+}
+
+export async function venueHealth(): Promise<VenueHealthRow[]> {
+  const rows = await sql<VenueHealthRow[]>`
+    SELECT venue_slug, venue_name, latest_status, latest_found,
+           median_found::float8 AS median_found, max_found, reason
+      FROM venue_health
+     WHERE reason IS NOT NULL
+     ORDER BY CASE reason
+                WHEN 'failed'      THEN 0
+                WHEN 'silent-zero' THEN 1
+                WHEN 'collapse'    THEN 2
+                ELSE 3
+              END,
+              venue_slug
+  `;
+  return rows;
+}

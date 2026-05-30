@@ -5,7 +5,9 @@ import {
   topSearches,
   topShowClicks,
   topVenueClicks,
+  venueHealth,
   visitTotals,
+  type VenueHealthRow,
 } from '@/lib/queries/events';
 import { fmtRelative } from '@/lib/format';
 
@@ -73,6 +75,16 @@ export default async function AdminDashboardPage({
     topShowClicks(7, 10),
     scrapeStatus(),
   ]);
+
+  // Kept off the Promise.all above so a not-yet-migrated DB (no venue_health
+  // view) degrades to an "unavailable" note instead of 500-ing the dashboard.
+  let health: VenueHealthRow[] = [];
+  let healthUnavailable = false;
+  try {
+    health = await venueHealth();
+  } catch {
+    healthUnavailable = true;
+  }
 
   return (
     <>
@@ -148,6 +160,10 @@ export default async function AdminDashboardPage({
           ✗ Refresh failed: <code>{decodeURIComponent(sp.error)}</code>
         </p>
       )}
+
+      <section style={{ marginBottom: 32 }}>
+        <HealthPanel rows={health} unavailable={healthUnavailable} />
+      </section>
 
       <div
         style={{
@@ -246,6 +262,69 @@ function RankedList<T>({
               {renderRow(r)}
             </li>
           ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function HealthPanel({
+  rows,
+  unavailable,
+}: {
+  rows: VenueHealthRow[];
+  unavailable: boolean;
+}) {
+  return (
+    <section>
+      <div
+        className="rail-head"
+        style={{ marginBottom: 12, alignItems: 'baseline' }}
+      >
+        <h2 className="rail-title" style={{ fontSize: 18 }}>
+          Venue health
+          {rows.length > 0 ? ` · ${rows.length} need attention` : ''}
+        </h2>
+      </div>
+      {unavailable ? (
+        <p className="ts-meta">
+          Unavailable — apply migration <code>0004_venue_health_view</code> to
+          this database.
+        </p>
+      ) : rows.length === 0 ? (
+        <p className="ts-meta">All venues healthy ✓</p>
+      ) : (
+        <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+          {rows.map((r) => {
+            const severe =
+              r.reason === 'failed' || r.reason === 'silent-zero';
+            return (
+              <li
+                key={r.venue_slug}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  gap: 12,
+                  padding: '8px 0',
+                  borderBottom: '1px solid var(--ts-rule)',
+                }}
+              >
+                <span>
+                  <a href={`/venues/${r.venue_slug}`}>
+                    {r.venue_name ?? r.venue_slug}
+                  </a>
+                  <span className="ts-meta" style={{ marginLeft: 8 }}>
+                    latest {r.latest_found ?? '—'} · ~
+                    {Math.round(r.median_found)} median
+                  </span>
+                </span>
+                <strong style={{ color: severe ? '#c8392b' : '#b8860b' }}>
+                  {r.reason}
+                </strong>
+              </li>
+            );
+          })}
         </ol>
       )}
     </section>

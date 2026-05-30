@@ -8,14 +8,17 @@ scrape sync-venues <theatres.yaml>                       upsert venues from YAML
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 import typer
 import yaml
 
 from .adapters import all_adapters, load_all
+from .health import unhealthy_venues
 from .http import Client
 from .models import Theatre
 from .runner import run_all, run_one
@@ -77,6 +80,32 @@ def scrape_all(
     # in the scrape_runs table for inspection.
     if runs and not success:
         sys.exit(1)
+
+
+@app.command("health")
+def health(
+    json_out: bool = typer.Option(False, "--json", help="Emit JSON instead of a table."),
+) -> None:
+    """Report venues whose latest scrape looks broken (failed / zero / collapse / stale).
+
+    Reads the `venue_health` view. Exits non-zero when any venue is flagged so a
+    CI step can branch on it (e.g. open a GitHub issue).
+    """
+    rows = unhealthy_venues()
+    if json_out:
+        typer.echo(json.dumps([asdict(r) for r in rows]))
+    elif not rows:
+        typer.echo("✓ All venues healthy.")
+    else:
+        typer.echo(f"⚠ {len(rows)} venue(s) need attention:\n")
+        for r in rows:
+            typer.echo(
+                f"  {r.reason:<12} {r.venue_slug:<28} "
+                f"latest={r.latest_found} (median≈{r.median_found:.0f}, max={r.max_found}) "
+                f"status={r.latest_status}"
+            )
+    if rows:
+        raise typer.Exit(code=1)
 
 
 @app.command("sync-venues")

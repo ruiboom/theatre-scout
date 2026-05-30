@@ -37,7 +37,7 @@ For developer onboarding see [SETUP.md](SETUP.md). For first-time deploy see [DE
 |------|-------|-----|
 | Source code | GitHub (public) | <https://github.com/ruiboom/theatre-scout> |
 | Scraper cron + manual trigger | GitHub Actions | <https://github.com/ruiboom/theatre-scout/actions> |
-| Public website + admin + Internal API | Vercel | <https://theatre-scout-zunz.vercel.app> |
+| Public website + admin + Internal API | Vercel | <https://theatre-scout.fun> |
 | Database | Neon | console at <https://console.neon.tech> |
 | MCP server | Cloudflare Workers | `https://platform-mcp-server.<account>.workers.dev/mcp` |
 
@@ -59,10 +59,22 @@ Every page is `force-dynamic` — no ISR, no edge caching. Each request hits Neo
 
 ### 1.2 URLs
 
-- **Production:** <https://theatre-scout-zunz.vercel.app>
-  - This is the canonical URL referenced by the MCP server's default `API_BASE_URL`, the OpenAPI export, and the scraper smoke test.
-- **Preview deploys:** Vercel auto-generates `https://theatre-scout-zunz-git-<branch>-<scope>.vercel.app` for every branch push.
-- **Custom domain:** if/when a custom domain is attached (e.g. `anywherebutwestend.com`), add it in Vercel → Project → Settings → Domains, set `NEXT_PUBLIC_SITE_URL` to match, and update the MCP server's `API_BASE_URL` secret.
+- **Production (primary):** <https://theatre-scout.fun> — the custom domain, set as **primary** in Vercel. The apex serves the app directly; `www` redirects to it. DNS setup + hard-won lessons are in §6.
+- **Vercel domain:** <https://theatre-scout-zunz.vercel.app> still works as an alias (it's the underlying project domain). A few configs haven't been migrated and still reference it — see §6.2.
+- **Preview deploys:** Vercel auto-generates `https://theatre-scout-zunz-git-<branch>-<scope>.vercel.app` for every branch push (tied to the project name, not the custom domain).
+
+> ⚠️ **Two Vercel projects deploy this repo — consolidation pending.** Alongside the
+> canonical `theatre-scout-zunz` above, a duplicate project **`theatre-scout`**
+> (<https://theatre-scout.vercel.app>) is also connected to the GitHub repo and
+> auto-deploys from `main` on every push, serving identical content. It's almost
+> certainly a second accidental import — Vercel appends the `-zunz` suffix when the
+> project name is already taken — and nothing in the repo references it. Risks: 2×
+> build minutes and **env/secret drift** (a `DATABASE_URL` rotation applied to only one
+> project leaves the other live on a stale connection string). **To fix:** confirm
+> `theatre-scout` has no custom domain or unique env vars, then disconnect or delete it
+> in the Vercel dashboard, leaving `theatre-scout-zunz` as the sole project. **Until
+> then, apply every env-var change to _both_ projects. Do not re-import the repo** —
+> that just spawns another duplicate.
 
 ### 1.3 Project settings
 
@@ -167,7 +179,7 @@ The free tier covers a handful of branches and the working set we use. Branch li
 | Apply migration | `psql "$DATABASE_URL_DIRECT" -f platform/packages/db/migrations/000X_*.sql` |
 | Manual query | `psql "$DATABASE_URL_DIRECT"` (use direct URL to avoid pooler quirks for interactive use) |
 | Snapshot data | Neon console → Backups (point-in-time recovery on paid; manual `pg_dump` on free) |
-| Rotate password | Console → project → Roles → reset password → update `DATABASE_URL` on Vercel and `NEON_DATABASE_URL` secret on GitHub → redeploy Vercel |
+| Rotate password | Console → project → Roles → reset password → update `DATABASE_URL` on Vercel (**both projects** until the duplicate is removed — see §1.2) and `NEON_DATABASE_URL` secret on GitHub → redeploy Vercel |
 | Inspect events / scrape status | `select * from scrape_runs order by started_at desc limit 20;` |
 
 ### 2.7 Failure modes
@@ -259,7 +271,7 @@ For **Claude Desktop**, add to `~/Library/Application Support/Claude/claude_desk
 
 Restart Claude Desktop. The six tools should appear. The tool names (`search_shows`, `get_show`, `whats_on`, `recommend_shows`, `search_venues`, `get_venue`) match what's in [docs/TOOL_SURFACE.md](docs/TOOL_SURFACE.md).
 
-For the **Custom GPT**: paste `https://theatre-scout-zunz.vercel.app/api/openapi` (or `<MCP-URL>/openapi.json` — they're equivalent) into the Actions config at <https://chatgpt.com/gpts/editor>.
+For the **Custom GPT**: paste `https://theatre-scout.fun/api/openapi` (or `<MCP-URL>/openapi.json` — they're equivalent) into the Actions config at <https://chatgpt.com/gpts/editor>.
 
 ### 3.7 Failure modes
 
@@ -421,9 +433,38 @@ Nothing else is configured. The Neon connection strings and the admin password a
 
 ## 6. Domain / DNS
 
-Current state: the site runs on the auto-issued Vercel domain `theatre-scout-zunz.vercel.app` and the auto-issued Cloudflare domain `platform-mcp-server.<account>.workers.dev`. No custom domain yet.
+**Live custom domain: <https://theatre-scout.fun>** — registrar + DNS at **Hover**, set as the **primary** domain in Vercel. The Cloudflare MCP server is still on its auto-issued `platform-mcp-server.<account>.workers.dev` domain.
 
-To attach a custom domain (e.g. `anywherebutwestend.com`):
+### 6.1 How `theatre-scout.fun` is wired (the working setup)
+
+DNS at Hover (TTL 15 min):
+
+| Type | Host | Value | Purpose |
+|------|------|-------|---------|
+| `A` | `@` | `216.198.79.1` | apex → Vercel (serves the app) |
+| `A` | `www` | `216.198.79.1` | `www` → Vercel |
+| `MX` | `@` | `10 mx.hover.com...` | email — leave alone |
+
+In Vercel → Domains, `theatre-scout.fun` is **primary** (apex serves the app directly) and `www` redirects to the apex. Vercel auto-issues the TLS certs once the records resolve.
+
+**Lessons (these cost an afternoon — don't repeat):**
+- **Don't use Hover's "URL forwarding"** (FORWARDS tab). It's HTTP-only — port 443 has no cert, so `https://` just times out. Point DNS at Vercel instead.
+- **Hover wouldn't persist a `CNAME` on `www`** — the add silently never reached its nameservers, and a CNAME colliding with a leftover/wildcard record returns `SERVFAIL`. An **A record to Vercel's IP** (`216.198.79.1`) works and Vercel accepts it for `www`.
+- **No wildcard `A *`** — it injects an A for every host and collides with any per-host CNAME, breaking that host.
+- Making the **apex primary** got the site live immediately off the already-valid apex cert, decoupling launch from the `www` gymnastics.
+
+### 6.2 Still on the `.vercel.app` domain (migrate when ready)
+
+These were **not** switched to the custom domain and still point at `theatre-scout-zunz.vercel.app`:
+
+- **Vercel env `NEXT_PUBLIC_SITE_URL`** → set to `https://theatre-scout.fun` and redeploy, so canonical URLs / OpenGraph / the `/api/openapi` `servers` block use it.
+- **MCP worker secret `API_BASE_URL`** → `wrangler secret put API_BASE_URL` = `https://theatre-scout.fun/api/v1`.
+- **GitHub Actions variable `SITE_BASE_URL`** (post-scrape smoke test).
+- **`apps/mcp-server/server.json` `websiteUrl`** and the **`/api/openapi` fallback** in `app/api/openapi/route.ts` (a code default, harmless once the env var is set).
+
+### 6.3 Attaching a *different* / additional domain
+
+To attach another custom domain (e.g. `anywherebutwestend.com`):
 
 1. **Register and host DNS** in Cloudflare (recommended — gives free CDN and clean integration with Workers).
 2. **Vercel website:**
@@ -511,7 +552,7 @@ Realistic next-step total: ~$45/mo when growing past the free tiers.
 
 | I need to... | Go to... |
 |--------------|----------|
-| Check if the site is up | <https://theatre-scout-zunz.vercel.app> |
+| Check if the site is up | <https://theatre-scout.fun> |
 | Open the repo | <https://github.com/ruiboom/theatre-scout> |
 | Look at last-run scrape | <https://github.com/ruiboom/theatre-scout/actions/workflows/scrape.yml> |
 | Trigger a scrape | `/admin` on the site, or Actions tab → "Daily scrape" → "Run workflow" |

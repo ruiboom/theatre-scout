@@ -216,6 +216,18 @@ export async function searchShows(
         ? sql`AND s.venue_id = ANY(${input.venue_ids})`
         : sql``
     }
+    ${
+      input.first_seen_within_days != null
+        ? sql`AND s.first_seen_at >= NOW() - (${input.first_seen_within_days} || ' days')::interval`
+        : sql``
+    }
+    ${
+      input.closing_within_days != null
+        ? sql`AND s.end_date IS NOT NULL
+              AND s.end_date >= ${dateFrom}::date
+              AND s.end_date <= ${dateFrom}::date + (${input.closing_within_days} || ' days')::interval`
+        : sql``
+    }
   `;
 
   const orderBy = orderByFor(input.sort, input.dir);
@@ -248,6 +260,8 @@ function orderByFor(
   const desc = dir === 'desc';
   const direction = desc ? sql`DESC NULLS LAST` : sql`ASC NULLS LAST`;
   switch (field) {
+    case 'first_seen':
+      return sql`s.first_seen_at ${direction}, LOWER(s.title)`;
     case 'title':
       return sql`LOWER(s.title) ${direction}`;
     case 'venue':
@@ -369,4 +383,48 @@ export async function openingsByDay(
      ORDER BY s.start_date
   `) as Array<{ day: string; count: number }>;
   return rows.map((r) => ({ day: r.day, count: Number(r.count) || 0 }));
+}
+
+/**
+ * recentlyAdded — shows first seen within the last `days`, newest first. Powers
+ * the "Just Announced" editorial page; carries `first_seen_at` for the
+ * "added Nd ago" badge. Excludes runs that have already ended.
+ */
+export async function recentlyAdded(
+  days: number,
+  limit: number,
+): Promise<Array<Show & { first_seen_at: string }>> {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const rows = (await sql<(ShowRow & { first_seen_at: string })[]>`
+    SELECT ${showColumns}, s.first_seen_at
+      FROM shows s
+      JOIN venues v ON v.id = s.venue_id
+     WHERE s.first_seen_at >= NOW() - (${days} || ' days')::interval
+       AND (s.end_date IS NULL OR s.end_date >= ${todayIso}::date)
+     ORDER BY s.first_seen_at DESC, LOWER(s.title)
+     LIMIT ${limit}
+  `) as Array<ShowRow & { first_seen_at: string }>;
+  return rows.map((r) => ({ ...rowToShow(r), first_seen_at: r.first_seen_at }));
+}
+
+/**
+ * closingSoon — shows whose run ends within the next `days`, soonest first.
+ * Powers the "Closing Soon" editorial page. `end_date` is on the Show, so the
+ * "closes in N days" countdown is derived client-side.
+ */
+export async function closingSoon(days: number, limit: number): Promise<Show[]> {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const toIso = new Date(Date.now() + days * 86400_000)
+    .toISOString()
+    .slice(0, 10);
+  const { shows } = await searchShows({
+    date_from: todayIso,
+    date_to: toIso,
+    closing_within_days: days,
+    sort: 'end_date',
+    dir: 'asc',
+    min_price: 0,
+    limit,
+  });
+  return shows;
 }

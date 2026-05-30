@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveWindow } from './time';
+import { londonToday, resolveWindow } from './time';
 
 describe('resolveWindow', () => {
   it('"tonight" returns a single-day window', () => {
@@ -29,5 +29,16 @@ describe('resolveWindow', () => {
     const d1 = new Date(t.from + 'T00:00:00Z').getTime();
     const d2 = new Date(n.from + 'T00:00:00Z').getTime();
     expect(d2 - d1).toBe(7 * 86_400_000);
+  });
+});
+
+describe('londonToday', () => {
+  it('returns an ISO date string', () => {
+    expect(londonToday()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('agrees with "tonight"', () => {
+    // Both resolve "now" in Europe/London; they must name the same day.
+    expect(londonToday()).toBe(resolveWindow('tonight').from);
   });
 });

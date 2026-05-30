@@ -1,6 +1,17 @@
-import { searchShows } from '@/lib/queries/shows';
+import { openingsByDay, searchShows } from '@/lib/queries/shows';
 import type { Show, ShowType, VenueCategory } from '@platform/shared';
 import { fmtDateRange, fmtPrice, pad2, pad3 } from '@/lib/format';
+import { londonToday } from '@/lib/time';
+import {
+  addMonths,
+  dayLabel,
+  monthGrid,
+  monthLabel,
+  monthParam,
+  parseMonth,
+  WEEKDAY_HEADERS,
+  type DayCell,
+} from '@/lib/calendar';
 import { trackEvent, trackedExternalHref } from '@/lib/track';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +73,8 @@ function pickStr(v: string | string[] | undefined): string {
 function buildChipUrl(current: Record<string, string>, changes: Record<string, string>): string {
   const merged = { ...current, ...changes };
   if (merged.view === 'rails') merged.view = '';
+  // `cal` (which month the grid shows) only means anything in calendar view.
+  if (merged.view !== 'calendar') merged.cal = '';
   const cleaned = Object.entries(merged).filter(([, v]) => v && v.length > 0);
   if (cleaned.length === 0) return '/shows';
   return '/shows?' + new URLSearchParams(cleaned).toString();
@@ -81,29 +94,48 @@ export default async function ShowsPage({
   const filterType = pickStr(sp.type);
   const filterCat = pickStr(sp.cat) as '' | VenueCategory;
   const filterWhen = pickStr(sp.when); // '', 'today', 'week', 'new'
+  const filterDate = /^\d{4}-\d{2}-\d{2}$/.test(pickStr(sp.date))
+    ? pickStr(sp.date)
+    : '';
+  const cal = pickStr(sp.cal); // which month the calendar grid shows, 'YYYY-MM'
   const sortField = pickStr(sp.sort) || 'start_date';
   const sortDir = pickStr(sp.dir) || 'asc';
-  const view = (pickStr(sp.view) || 'rails') as 'rails' | 'list';
+  const view = (pickStr(sp.view) || 'rails') as 'rails' | 'list' | 'calendar';
 
-  const today = new Date();
-  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
-  let date_from: string | undefined;
-  let date_to: string | undefined;
-  if (filterWhen === 'today') {
-    date_from = fmtIso(today);
-    date_to = fmtIso(today);
+  const showType = (SHOW_TYPES as readonly string[]).includes(filterType)
+    ? (filterType as Show['show_type'])
+    : undefined;
+
+  const todayIso = londonToday();
+  const addDaysIso = (iso: string, n: number) =>
+    new Date(new Date(iso + 'T00:00:00Z').getTime() + n * 86400_000)
+      .toISOString()
+      .slice(0, 10);
+
+  // A picked `date` is a single-day filter in every view — "Today" generalised
+  // to any day. The `when` presets are ranges and only apply to rails/list.
+  // Calendar view always lists one day: the picked date, else today.
+  const effectiveDate = filterDate || todayIso;
+  let date_from: string;
+  let date_to: string;
+  if (filterDate || view === 'calendar') {
+    date_from = effectiveDate;
+    date_to = effectiveDate;
+  } else if (filterWhen === 'today') {
+    date_from = todayIso;
+    date_to = todayIso;
   } else if (filterWhen === 'week') {
-    date_from = fmtIso(today);
-    date_to = fmtIso(new Date(today.getTime() + 7 * 86400_000));
+    date_from = todayIso;
+    date_to = addDaysIso(todayIso, 7);
   } else if (filterWhen === 'new') {
     // "New" means first_seen_at within the last 14 days. The query layer
     // doesn't expose that directly yet — same default window for now, the
     // ordering brings the most-recently-added rows up.
-    date_from = fmtIso(today);
-    date_to = fmtIso(new Date(today.getTime() + 365 * 86400_000));
+    date_from = todayIso;
+    date_to = addDaysIso(todayIso, 365);
   } else {
-    date_from = fmtIso(today);
-    date_to = fmtIso(new Date(today.getTime() + 365 * 86400_000));
+    date_from = todayIso;
+    date_to = addDaysIso(todayIso, 365);
   }
 
   let shows: Show[] = [];
@@ -111,10 +143,7 @@ export default async function ShowsPage({
   try {
     const result = await searchShows({
       q: q || undefined,
-      show_type:
-        (SHOW_TYPES as readonly string[]).includes(filterType)
-          ? (filterType as Show['show_type'])
-          : undefined,
+      show_type: showType,
       category: filterCat || undefined,
       sort: (['start_date', 'end_date', 'title', 'venue'] as const).includes(
         sortField as 'start_date',
@@ -132,11 +161,35 @@ export default async function ShowsPage({
     error = err instanceof Error ? err.message : String(err);
   }
 
+  // Calendar view also needs per-day opening counts for the visible month grid.
+  let calYear = 0;
+  let calMonth = 0;
+  let calWeeks: DayCell[][] = [];
+  const openings = new Map<string, number>();
+  if (view === 'calendar') {
+    const ym = parseMonth(cal, effectiveDate);
+    calYear = ym.year;
+    calMonth = ym.month;
+    calWeeks = monthGrid(calYear, calMonth);
+    try {
+      const rows = await openingsByDay(calWeeks[0]![0]!.iso, calWeeks[5]![6]!.iso, {
+        category: filterCat || undefined,
+        show_type: showType,
+        q: q || undefined,
+      });
+      for (const r of rows) openings.set(r.day, r.count);
+    } catch {
+      // Grid still renders, just without the opening badges.
+    }
+  }
+
   const current = {
     q,
     type: filterType,
     cat: filterCat,
     when: filterWhen,
+    date: filterDate,
+    cal: view === 'calendar' ? cal : '',
     view,
     sort: sortField === 'start_date' ? '' : sortField,
     dir: sortDir === 'asc' ? '' : sortDir,
@@ -186,18 +239,53 @@ export default async function ShowsPage({
 
       <section className="controls">
         <div className="controls-l tabs">
-          <Chip active={!filterWhen} href={chipUrl({ when: '' })}>
-            All
-          </Chip>
-          <Chip active={filterWhen === 'today'} href={chipUrl({ when: 'today' })}>
-            Today
-          </Chip>
-          <Chip active={filterWhen === 'week'} href={chipUrl({ when: 'week' })}>
-            This week
-          </Chip>
-          <Chip active={filterWhen === 'new'} href={chipUrl({ when: 'new' })}>
-            New
-          </Chip>
+          {view === 'calendar' ? (
+            <span className="ts-chip ts-chip--active">{dayLabel(effectiveDate)}</span>
+          ) : (
+            <>
+              <Chip
+                active={!filterWhen && !filterDate}
+                href={chipUrl({ when: '', date: '' })}
+              >
+                All
+              </Chip>
+              <Chip
+                active={filterWhen === 'today' && !filterDate}
+                href={chipUrl({ when: 'today', date: '' })}
+              >
+                Today
+              </Chip>
+              <Chip
+                active={filterWhen === 'week' && !filterDate}
+                href={chipUrl({ when: 'week', date: '' })}
+              >
+                This week
+              </Chip>
+              <Chip
+                active={filterWhen === 'new' && !filterDate}
+                href={chipUrl({ when: 'new', date: '' })}
+              >
+                New
+              </Chip>
+              {filterDate && (
+                <span className="cal-datechip">
+                  <a
+                    className="ts-chip ts-chip--active"
+                    href={chipUrl({ view: 'calendar' })}
+                  >
+                    {dayLabel(filterDate)}
+                  </a>
+                  <a
+                    className="cal-datechip-x"
+                    href={chipUrl({ date: '', cal: '' })}
+                    aria-label="Clear date"
+                  >
+                    ×
+                  </a>
+                </span>
+              )}
+            </>
+          )}
         </div>
         <div className="controls-r">
           <form className="search" method="get" action="/shows">
@@ -218,6 +306,12 @@ export default async function ShowsPage({
             </Chip>
             <Chip active={view === 'list'} href={chipUrl({ view: 'list' })}>
               List
+            </Chip>
+            <Chip
+              active={view === 'calendar'}
+              href={chipUrl({ view: 'calendar', when: '' })}
+            >
+              Calendar
             </Chip>
           </div>
         </div>
@@ -299,7 +393,19 @@ export default async function ShowsPage({
         </div>
       )}
 
-      {error ? (
+      {view === 'calendar' ? (
+        <CalendarView
+          year={calYear}
+          month={calMonth}
+          weeks={calWeeks}
+          todayIso={todayIso}
+          selectedIso={effectiveDate}
+          openings={openings}
+          shows={shows}
+          error={error}
+          chipUrl={chipUrl}
+        />
+      ) : error ? (
         <p className="empty">Couldn&rsquo;t reach the database — {error}.</p>
       ) : shows.length === 0 ? (
         <p className="empty">No shows match. Try clearing filters.</p>
@@ -429,5 +535,123 @@ function ShowRow({ idx, show }: { idx: number; show: Show }) {
       <div className="row-dates">{fmtDateRange(show.start_date, show.end_date)}</div>
       <div className="row-aside">{fmtPrice(show.price_min, show.price_max)}</div>
     </div>
+  );
+}
+
+/**
+ * Month grid + selected-day list. Pure presentation — the grid is a set of
+ * links (month nav, day select are URL changes), so the whole calendar stays
+ * server-rendered with no client JS, matching the rest of the page. Cells with
+ * openings carry a count badge; today and the selected day get their own marks.
+ */
+function CalendarView({
+  year,
+  month,
+  weeks,
+  todayIso,
+  selectedIso,
+  openings,
+  shows,
+  error,
+  chipUrl,
+}: {
+  year: number;
+  month: number;
+  weeks: DayCell[][];
+  todayIso: string;
+  selectedIso: string;
+  openings: Map<string, number>;
+  shows: Show[];
+  error: string | null;
+  chipUrl: (changes: Record<string, string>) => string;
+}) {
+  const prev = addMonths(year, month, -1);
+  const next = addMonths(year, month, 1);
+  return (
+    <>
+      <section className="cal">
+        <div className="cal-nav">
+          <a
+            className="cal-nav-btn"
+            href={chipUrl({ cal: monthParam(prev.year, prev.month) })}
+            aria-label="Previous month"
+          >
+            ‹
+          </a>
+          <h2 className="cal-month">{monthLabel(year, month)}</h2>
+          <a
+            className="cal-nav-btn"
+            href={chipUrl({ cal: monthParam(next.year, next.month) })}
+            aria-label="Next month"
+          >
+            ›
+          </a>
+        </div>
+        <div className="cal-dow">
+          {WEEKDAY_HEADERS.map((d) => (
+            <div key={d} className="cal-dow-cell">
+              {d}
+            </div>
+          ))}
+        </div>
+        <div className="cal-grid">
+          {weeks.flat().map((cell) => {
+            const count = openings.get(cell.iso) ?? 0;
+            const cls = [
+              'cal-cell',
+              cell.inMonth ? '' : 'cal-cell--muted',
+              cell.iso === todayIso ? 'cal-cell--today' : '',
+              cell.iso === selectedIso ? 'cal-cell--selected' : '',
+              count > 0 ? 'cal-cell--open' : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <a
+                key={cell.iso}
+                className={cls}
+                href={chipUrl({
+                  date: cell.iso,
+                  cal: cell.iso.slice(0, 7),
+                  view: 'calendar',
+                })}
+              >
+                <span className="cal-cell-day">{cell.day}</span>
+                {count > 0 && (
+                  <span
+                    className="cal-cell-count"
+                    title={`${count} opening${count === 1 ? '' : 's'}`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </a>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="list">
+        <div className="list-head">
+          <div className="list-head-mono">
+            Shows running on {dayLabel(selectedIso)} ·{' '}
+            {shows.length.toLocaleString()}
+          </div>
+        </div>
+        {error ? (
+          <p className="empty">Couldn&rsquo;t reach the database — {error}.</p>
+        ) : shows.length === 0 ? (
+          <p className="empty">
+            Nothing listed for {dayLabel(selectedIso)}. Try another day.
+          </p>
+        ) : (
+          <div className="row-list">
+            {shows.map((s, i) => (
+              <ShowRow key={s.id} idx={i + 1} show={s} />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 }

@@ -63,18 +63,12 @@ Every page is `force-dynamic` — no ISR, no edge caching. Each request hits Neo
 - **Vercel domain:** <https://theatre-scout-zunz.vercel.app> still works as an alias (it's the underlying project domain). A few configs haven't been migrated and still reference it — see §6.2.
 - **Preview deploys:** Vercel auto-generates `https://theatre-scout-zunz-git-<branch>-<scope>.vercel.app` for every branch push (tied to the project name, not the custom domain).
 
-> ⚠️ **Two Vercel projects deploy this repo — consolidation pending.** Alongside the
-> canonical `theatre-scout-zunz` above, a duplicate project **`theatre-scout`**
-> (<https://theatre-scout.vercel.app>) is also connected to the GitHub repo and
-> auto-deploys from `main` on every push, serving identical content. It's almost
-> certainly a second accidental import — Vercel appends the `-zunz` suffix when the
-> project name is already taken — and nothing in the repo references it. Risks: 2×
-> build minutes and **env/secret drift** (a `DATABASE_URL` rotation applied to only one
-> project leaves the other live on a stale connection string). **To fix:** confirm
-> `theatre-scout` has no custom domain or unique env vars, then disconnect or delete it
-> in the Vercel dashboard, leaving `theatre-scout-zunz` as the sole project. **Until
-> then, apply every env-var change to _both_ projects. Do not re-import the repo** —
-> that just spawns another duplicate.
+> **One Vercel project: `theatre-scout-zunz`.** A duplicate `theatre-scout` project
+> (auto-created by a second repo import — Vercel appends the `-zunz` suffix when the
+> name is already taken) once shadowed it and double-deployed every push; it was
+> **deleted on 2026-05-30**. **Do not re-import the repo into Vercel** — that just
+> spawns another duplicate. If two projects ever reappear, delete the extra promptly so
+> env/secret changes (e.g. a `DATABASE_URL` rotation) can't drift between them.
 
 ### 1.3 Project settings
 
@@ -179,7 +173,7 @@ The free tier covers a handful of branches and the working set we use. Branch li
 | Apply migration | `psql "$DATABASE_URL_DIRECT" -f platform/packages/db/migrations/000X_*.sql` |
 | Manual query | `psql "$DATABASE_URL_DIRECT"` (use direct URL to avoid pooler quirks for interactive use) |
 | Snapshot data | Neon console → Backups (point-in-time recovery on paid; manual `pg_dump` on free) |
-| Rotate password | Console → project → Roles → reset password → update `DATABASE_URL` on Vercel (**both projects** until the duplicate is removed — see §1.2) and `NEON_DATABASE_URL` secret on GitHub → redeploy Vercel |
+| Rotate password | Console → project → Roles → reset password → update `DATABASE_URL` on Vercel and `NEON_DATABASE_URL` secret on GitHub → redeploy Vercel |
 | Inspect events / scrape status | `select * from scrape_runs order by started_at desc limit 20;` |
 
 ### 2.7 Failure modes
@@ -455,9 +449,8 @@ In Vercel → Domains, `theatre-scout.fun` is **primary** (apex serves the app d
 
 ### 6.2 Still on the `.vercel.app` domain (migrate when ready)
 
-These were **not** switched to the custom domain and still point at `theatre-scout-zunz.vercel.app`:
+`NEXT_PUBLIC_SITE_URL` was set to `https://theatre-scout.fun` and redeployed on 2026-05-30 — the app's canonical URLs / OpenGraph / `/api/openapi` `servers` block now use the custom domain. Still pointing at `theatre-scout-zunz.vercel.app` (migrate when convenient — all harmless, the `.vercel.app` alias still resolves):
 
-- **Vercel env `NEXT_PUBLIC_SITE_URL`** → set to `https://theatre-scout.fun` and redeploy, so canonical URLs / OpenGraph / the `/api/openapi` `servers` block use it.
 - **MCP worker secret `API_BASE_URL`** → `wrangler secret put API_BASE_URL` = `https://theatre-scout.fun/api/v1`.
 - **GitHub Actions variable `SITE_BASE_URL`** (post-scrape smoke test).
 - **`apps/mcp-server/server.json` `websiteUrl`** and the **`/api/openapi` fallback** in `app/api/openapi/route.ts` (a code default, harmless once the env var is set).

@@ -574,3 +574,104 @@ a.row-venue:hover {
   color: var(--ts-mute);
   text-align: center;
 }
+
+/* ── Calendar view (month grid + selected-day list) ─────────────── */
+.cal { padding: 24px 0 8px; }
+.cal-nav {
+  display: flex; align-items: center; gap: 12px;
+  padding: 4px 0 20px;
+}
+.cal-month {
+  flex: 1;
+  margin: 0;
+  font-family: var(--ts-font-sans);
+  font-size: var(--ts-size-h4);
+  font-weight: 600;
+  letter-spacing: var(--ts-track-tight);
+}
+.cal-nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border: 1px solid var(--ts-hair);
+  font-family: var(--ts-font-mono);
+  font-size: 16px; line-height: 1;
+  color: var(--ts-ink);
+}
+.cal-nav-btn:hover { background: var(--ts-paper-2); text-decoration: none; }
+
+.cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal-dow-cell {
+  padding: 6px 8px;
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-meta);
+  letter-spacing: var(--ts-track-meta);
+  text-transform: uppercase;
+  color: var(--ts-mute);
+}
+
+/* 1px gap over a hair-coloured bg paints crisp gridlines without per-cell borders. */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--ts-hair);
+  border: 1px solid var(--ts-hair);
+}
+.cal-cell {
+  position: relative;
+  min-height: 64px;
+  padding: 8px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--ts-paper);
+  color: var(--ts-ink);
+}
+.cal-cell:hover { background: var(--ts-paper-2); text-decoration: none; }
+.cal-cell-day {
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-caption);
+  letter-spacing: var(--ts-track-meta);
+}
+.cal-cell-count {
+  align-self: flex-start;
+  padding: 2px 5px;
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-meta);
+  line-height: 1;
+  background: var(--ts-ink);
+  color: var(--ts-paper);
+}
+.cal-cell--open .cal-cell-day { font-weight: 600; }
+.cal-cell--muted .cal-cell-day { color: var(--ts-mute); opacity: 0.55; }
+/* today: a thin ink ring; selected: a fully inverted cell (selected wins). */
+.cal-cell--today { box-shadow: inset 0 0 0 2px var(--ts-ink); }
+.cal-cell--selected,
+.cal-cell--selected:hover { background: var(--ts-ink); }
+.cal-cell--selected .cal-cell-day { color: var(--ts-paper); }
+.cal-cell--selected .cal-cell-count {
+  background: var(--ts-paper); color: var(--ts-ink);
+}
+
+/* Active single-date chip (rails/list views): label + a clear "×". */
+.cal-datechip { display: inline-flex; align-items: stretch; }
+.cal-datechip .ts-chip { border-right: 0; }
+.cal-datechip-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid var(--ts-ink);
+  background: var(--ts-ink); color: var(--ts-paper);
+  font-family: var(--ts-font-mono);
+  font-size: var(--ts-size-meta);
+  line-height: 1;
+}
+.cal-datechip-x:hover {
+  background: var(--ts-warn); border-color: var(--ts-warn);
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .cal-cell { min-height: 52px; padding: 6px; }
+  .cal-cell-day { font-size: var(--ts-size-meta); }
+}

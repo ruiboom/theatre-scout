@@ -332,3 +332,41 @@ export async function getShow(opts: {
     },
   };
 }
+
+/**
+ * openingsByDay — how many shows *open* (start their run) on each date in
+ * [from, to]. Powers the /shows calendar grid's per-day "openings" highlight.
+ *
+ * Counting openings rather than "running on that day" is deliberate: most shows
+ * carry only a start/end range, so a run-overlap count would mark nearly every
+ * cell and tell the user nothing. An opening is a sparse, meaningful signal.
+ *
+ * Honours the same category/show_type/q filters as `searchShows` so the grid
+ * stays consistent with the rest of the filter bar. Returns one row per day that
+ * has at least one opening; days with none are simply absent.
+ */
+export async function openingsByDay(
+  from: string,
+  to: string,
+  filters: Pick<SearchShowsInput, 'category' | 'show_type' | 'q'> = {},
+): Promise<Array<{ day: string; count: number }>> {
+  const rows = (await sql<{ day: string; count: number }[]>`
+    SELECT to_char(s.start_date, 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+      FROM shows s
+      JOIN venues v ON v.id = s.venue_id
+     WHERE s.start_date BETWEEN ${from}::date AND ${to}::date
+       ${filters.category ? sql`AND v.category = ${filters.category}` : sql``}
+       ${filters.show_type ? sql`AND s.show_type = ${filters.show_type}` : sql``}
+       ${
+         filters.q
+           ? sql`AND (
+               s.search_tsv @@ websearch_to_tsquery('english', ${filters.q})
+               OR v.name ILIKE '%' || ${filters.q} || '%'
+             )`
+           : sql``
+       }
+     GROUP BY s.start_date
+     ORDER BY s.start_date
+  `) as Array<{ day: string; count: number }>;
+  return rows.map((r) => ({ day: r.day, count: Number(r.count) || 0 }));
+}

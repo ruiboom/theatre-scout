@@ -47,6 +47,15 @@ function toIsoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Today's date in Europe/London as an ISO `YYYY-MM-DD` string. Prefer this over
+ * `new Date().toISOString().slice(0, 10)` anywhere "today" is user-facing — the
+ * latter is UTC and rolls over an hour early during BST.
+ */
+export function londonToday(): string {
+  return toIsoDate(londonNow());
+}
+
 export type WhenWindow = 'tonight' | 'tomorrow' | 'this_weekend' | 'next_weekend' | 'this_week';
 
 export function resolveWindow(when: WhenWindow): { from: string; to: string } {

@@ -45,6 +45,9 @@ export default async function HomePage() {
             <a className="ts-btn ts-btn--primary" href="/shows">
               Browse the index ›
             </a>
+            <a className="ts-btn" href="/punt">
+              Take a punt ▶
+            </a>
           </div>
         </div>
         <div className="hero-r">

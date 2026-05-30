@@ -13,6 +13,7 @@ import {
   type DayCell,
 } from '@/lib/calendar';
 import { trackEvent, trackedExternalHref } from '@/lib/track';
+import { sampleRandom } from '@/lib/random';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,21 +44,6 @@ const SHOW_TYPE_RAILS: Array<{ key: ShowType; label: string }> = [
   { key: 'other', label: 'Other' },
 ];
 const RAIL_PICK_LIMIT = 4;
-
-/**
- * Pick up to `n` random items from `arr`. Used on the rails view so each
- * page load surfaces a different slice of what's playing — the rail's
- * "View all" link is there for the deterministic full list.
- */
-function sampleRandom<T>(arr: T[], n: number): T[] {
-  const copy = [...arr];
-  const take = Math.min(n, copy.length);
-  for (let i = 0; i < take; i++) {
-    const j = i + Math.floor(Math.random() * (copy.length - i));
-    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-  }
-  return copy.slice(0, take);
-}
 
 type Search = Record<string, string | string[] | undefined>;
 

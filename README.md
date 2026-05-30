@@ -42,7 +42,7 @@ There is no signup, no analytics, no external services. Everything runs on your 
 
 Beyond this local app there is a deployed version under [`platform/`](platform/) — a Next.js site on Vercel, a Neon Postgres database, GitHub Actions scrapers, and a remote MCP server on Cloudflare Workers that Claude and ChatGPT can connect to:
 
-- **Site:** <https://theatre-scout-zunz.vercel.app> — with public [`/privacy`](https://theatre-scout-zunz.vercel.app/privacy) and [`/terms`](https://theatre-scout-zunz.vercel.app/terms) pages.
+- **Site:** <https://theatre-scout.fun> — with public [`/privacy`](https://theatre-scout.fun/privacy) and [`/terms`](https://theatre-scout.fun/terms) pages.
 - **Remote MCP server:** `https://platform-mcp-server.boomclick.workers.dev/mcp` — OAuth 2.1-protected; add it as a custom connector in Claude/ChatGPT and click *Authorize*. `platform/apps/mcp-server/server.json` is the MCP Registry manifest.
 - The hosted site uses cookieless analytics and anonymous server-side counts only (see its privacy page). The **local** app described in this README still has no signup, analytics, or external services.
 

@@ -2,7 +2,7 @@
 
 **Anywhere But West End** — multi-surface listings platform for London's ~70 non-West End theatres.
 
-Production: <https://theatre-scout-zunz.vercel.app>
+Production: <https://theatre-scout.fun> (custom domain; `theatre-scout-zunz.vercel.app` still works)
 
 This README is the complete technical reference for the deployed online platform. For the local Python research app at the repo root (`scout/`), see the root `README.md` and `CLAUDE.md` — that codebase is independent.
 

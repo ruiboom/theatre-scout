@@ -17,9 +17,10 @@ live in [`platform/README.md`](platform/README.md).
 `platform/` is an internet-facing system, independent of the local `scout/`
 scraper (it has its own Python scrapers, DB, and docs):
 
-- **Website + Internal API** — Next.js on Vercel
-  (`https://theatre-scout-zunz.vercel.app`), including public `/privacy` and
-  `/terms` pages linked from the site footer.
+- **Website + Internal API** — Next.js on Vercel at
+  `https://theatre-scout.fun` (custom domain; `theatre-scout-zunz.vercel.app`
+  still works as an alias), including public `/privacy` and `/terms` pages
+  linked from the site footer.
 - **Remote MCP server** — Cloudflare Workers
   (`https://platform-mcp-server.boomclick.workers.dev/mcp`), **OAuth 2.1-protected**
   via `@cloudflare/workers-oauth-provider` so Claude and ChatGPT can add it as

@@ -2,7 +2,7 @@
 
 This is the everyday guide to using **Anywhere But West End** — the public listings site for London's 70 non-West End theatres — and to running its small admin CMS.
 
-The product lives at **<https://theatre-scout-zunz.vercel.app>** (production Vercel URL). A custom domain may be attached later; the playbook covers that.
+The product lives at **<https://theatre-scout.fun>** (the custom domain; the underlying Vercel URL `theatre-scout-zunz.vercel.app` still works). See the playbook §6 for how the DNS is wired.
 
 ---
 
@@ -80,7 +80,7 @@ Events feed the admin dashboard only. There is no third-party tracker, no Google
 The same data is exposed through two machine surfaces. End users don't need to know about these — they're documented in [README.md](README.md) and the [Tool Surface spec](docs/TOOL_SURFACE.md).
 
 - **MCP server** — `https://platform-mcp-server.<account>.workers.dev/mcp` — six tools (`search_shows`, `get_show`, `whats_on`, `recommend_shows`, `search_venues`, `get_venue`) usable from Claude Desktop or any MCP client.
-- **OpenAPI** — `https://theatre-scout-zunz.vercel.app/api/openapi` — used to build the Custom GPT.
+- **OpenAPI** — `https://theatre-scout.fun/api/openapi` — used to build the Custom GPT.
 
 Both speak to the same underlying Internal API (`/api/v1/*`) — agents and humans see the exact same data.
 
@@ -92,7 +92,7 @@ The admin area is **password-only**. There is one admin account, controlled by t
 
 ### Logging in (`/admin/login`)
 
-1. Visit **<https://theatre-scout-zunz.vercel.app/admin/login>**.
+1. Visit **<https://theatre-scout.fun/admin/login>**.
 2. Enter the admin password.
 3. On success you're redirected to `/admin`. On failure the form shows a generic error.
 

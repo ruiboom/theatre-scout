@@ -3,7 +3,7 @@ import type { Show } from '@platform/shared';
 import { fmtDateRange, fmtPrice } from '@/lib/format';
 import { londonToday, resolveWindow } from '@/lib/time';
 import { pickOne } from '@/lib/random';
-import { trackEvent, trackedExternalHref } from '@/lib/track';
+import { trackedExternalHref } from '@/lib/track';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
@@ -49,7 +49,8 @@ export default async function PuntPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
-  void trackEvent({ type: 'visit', path: '/punt' });
+  // Stays dynamic (random pick per spin, seeded by the query string). The visit
+  // is logged client-side by <VisitBeacon> in the layout.
 
   const when = pickStr(sp.when) === 'weekend' ? 'weekend' : 'tonight';
   const budgetKey = ['15', '25'].includes(pickStr(sp.max_price))

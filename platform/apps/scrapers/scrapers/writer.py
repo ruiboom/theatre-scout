@@ -253,3 +253,25 @@ def record_run(run: ScrapeRun) -> None:
             ),
         )
         conn.commit()
+
+
+# ---- events retention -------------------------------------------------------
+
+
+def prune_events(days: int = 90) -> int:
+    """Delete analytics `events` rows older than `days`; return the count removed.
+
+    The events table is unbounded by design — one row per tracked visit / search
+    / outbound click — so without periodic pruning it grows forever, inflating
+    DB size and backups. This runs from the daily scrape workflow, the one cron
+    that already holds a direct Neon connection, so retention rides the same
+    schedule as ingestion.
+    """
+    with _conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM events WHERE occurred_at < NOW() - make_interval(days => %s)",
+            (days,),
+        )
+        n = cur.rowcount
+        conn.commit()
+    return n

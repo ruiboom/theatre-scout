@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { WhatsOnInput, type SearchShowsInput } from '@platform/shared';
 import { searchShows } from '@/lib/queries/shows';
 import { searchVenues } from '@/lib/queries/venues';
-import { paramsFromUrl, parseInput } from '@/lib/api';
+import { API_CACHE_CONTROL, paramsFromUrl, parseInput } from '@/lib/api';
 import { resolveWindow } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
@@ -56,5 +56,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { shows, total } = await searchShows(searchInput);
-  return NextResponse.json({ shows, total, window });
+  return NextResponse.json(
+    { shows, total, window },
+    { headers: { 'cache-control': API_CACHE_CONTROL } },
+  );
 }

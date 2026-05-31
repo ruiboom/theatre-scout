@@ -1,9 +1,31 @@
 import { notFound } from 'next/navigation';
-import { getShow } from '@/lib/queries/shows';
+import { getShow, sitemapShows } from '@/lib/queries/shows';
 import { fmtDateRange, fmtPrice } from '@/lib/format';
-import { trackEvent, trackedExternalHref } from '@/lib/track';
+import { trackedExternalHref } from '@/lib/track';
 
-export const dynamic = 'force-dynamic';
+// ISR — show pages change only on the daily scrape. Cached per slug and
+// regenerated hourly so crawler sweeps of the detail URLs hit the CDN, not Neon
+// (was force-dynamic). Visits tracked client-side via <VisitBeacon>.
+export const revalidate = 3600;
+// Explicit (this is the default): slugs not returned by generateStaticParams —
+// e.g. shows added by the daily scrape after the last deploy — render on demand
+// and are then cached, rather than 404ing. Without this guarantee a new show
+// would be unreachable until the next deploy.
+export const dynamicParams = true;
+
+// Pre-render the current shows at deploy and ISR-cache them; slugs that appear
+// between deploys (new shows from the daily scrape) render on first hit and are
+// then cached too (dynamicParams defaults true). `generateStaticParams` is what
+// puts a dynamic segment on the static/ISR path at all — without it Next treats
+// `[slug]` as fully dynamic and re-queries Neon per request. Tolerate a missing
+// DB at build by falling back to pure on-demand generation.
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  try {
+    return (await sitemapShows()).map((s) => ({ slug: s.slug }));
+  } catch {
+    return [];
+  }
+}
 
 export default async function ShowPage({
   params,
@@ -13,7 +35,6 @@ export default async function ShowPage({
   const { slug } = await params;
   const show = await getShow({ slug });
   if (!show) notFound();
-  void trackEvent({ type: 'visit', path: `/shows/${slug}`, target: slug });
 
   return (
     <>

@@ -3,6 +3,17 @@ import { ZodError, z } from 'zod';
 import type { ApiError } from '@platform/shared';
 
 /**
+ * Cache-Control for the read-only GET endpoints. The data only changes on the
+ * daily scrape, so letting Vercel's CDN serve a shared copy for a few minutes
+ * collapses repeated identical reads — an agent looping a tool, a crawler
+ * sweeping the API — down to one Neon hit per window per query. `stale-while-
+ * revalidate` keeps responses instant while a fresh copy is fetched in the
+ * background. POST endpoints (recommend, events, admin) stay uncached.
+ */
+export const API_CACHE_CONTROL =
+  'public, s-maxage=300, stale-while-revalidate=86400';
+
+/**
  * Parse `Request` body or query params with a zod schema and return either
  * the parsed value or a 400 NextResponse. Keeps every route handler down to
  * about three lines of validation.

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getVenue } from '@/lib/queries/venues';
-import { jsonError } from '@/lib/api';
+import { API_CACHE_CONTROL, jsonError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,5 +20,7 @@ export async function GET(
     include_shows: includeShows,
   });
   if (!venue) return jsonError(404, 'not_found', `No venue matched ${id}`);
-  return NextResponse.json(venue);
+  return NextResponse.json(venue, {
+    headers: { 'cache-control': API_CACHE_CONTROL },
+  });
 }

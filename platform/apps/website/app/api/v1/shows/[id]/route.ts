@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getShow } from '@/lib/queries/shows';
-import { jsonError } from '@/lib/api';
+import { API_CACHE_CONTROL, jsonError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,5 +20,7 @@ export async function GET(
   const isUuid = UUID_RE.test(id);
   const show = await getShow(isUuid ? { show_id: id } : { slug: id });
   if (!show) return jsonError(404, 'not_found', `No show matched ${id}`);
-  return NextResponse.json(show);
+  return NextResponse.json(show, {
+    headers: { 'cache-control': API_CACHE_CONTROL },
+  });
 }

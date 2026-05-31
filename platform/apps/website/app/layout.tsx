@@ -3,6 +3,7 @@ import './globals.css';
 import { lastScrapeAt } from '@/lib/queries/venues';
 import { fmtRelative } from '@/lib/format';
 import { Analytics } from '@vercel/analytics/next';
+import { VisitBeacon } from '@/components/visit-beacon';
 
 export const metadata: Metadata = {
   title: {
@@ -70,6 +71,7 @@ export default async function RootLayout({
           </div>
         </footer>
         <Analytics />
+        <VisitBeacon />
       </body>
     </html>
   );

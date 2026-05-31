@@ -2,9 +2,10 @@ import type { Show } from '@platform/shared';
 import { recentlyAdded } from '@/lib/queries/shows';
 import { EditorialFeed } from '@/components/editorial-feed';
 import { fmtRelative } from '@/lib/format';
-import { trackEvent } from '@/lib/track';
 
-export const dynamic = 'force-dynamic';
+// ISR — daily data; cache the render and refresh hourly (was force-dynamic).
+// Visits tracked client-side via <VisitBeacon> in the layout.
+export const revalidate = 3600;
 export const metadata = {
   title: 'Just announced · Theatre Scout',
   description:
@@ -12,8 +13,6 @@ export const metadata = {
 };
 
 export default async function NewPage() {
-  void trackEvent({ type: 'visit', path: '/new' });
-
   let items: Array<{ show: Show; badge: string | null }> = [];
   let error: string | null = null;
   try {

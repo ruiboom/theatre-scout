@@ -2,9 +2,10 @@ import type { Show } from '@platform/shared';
 import { closingSoon } from '@/lib/queries/shows';
 import { EditorialFeed } from '@/components/editorial-feed';
 import { londonToday } from '@/lib/time';
-import { trackEvent } from '@/lib/track';
 
-export const dynamic = 'force-dynamic';
+// ISR — daily data; cache the render and refresh hourly (was force-dynamic).
+// Visits tracked client-side via <VisitBeacon> in the layout.
+export const revalidate = 3600;
 export const metadata = {
   title: 'Closing soon · Theatre Scout',
   description:
@@ -27,7 +28,6 @@ function closingBadge(d: number | null): string | null {
 }
 
 export default async function ClosingPage() {
-  void trackEvent({ type: 'visit', path: '/closing' });
   const todayIso = londonToday();
 
   let items: Array<{ show: Show; badge: string | null }> = [];

@@ -122,7 +122,19 @@ Reasoning for each choice lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## 4. Application: `apps/website` (Next.js)
 
-Hosts everything humans see and most of what machines see. Single Next.js project, App Router, all pages `force-dynamic` to guarantee fresh DB reads (no ISR — the data shape is small enough that querying directly per request is fine and Neon's pooled connection makes it cheap).
+Hosts everything humans see and most of what machines see. Single Next.js
+project, App Router. **Content pages are ISR-cached** (`revalidate = 3600`): the
+home index, the `/new` and `/closing` feeds, and every `/shows/[slug]` /
+`/venues/[slug]` detail page are rendered once and served from Vercel's CDN,
+regenerating hourly — the data only changes on the daily scrape, so a DB read
+per request was pure waste (and let overnight crawlers blow Neon's transfer
+budget). Pages that are inherently query-driven (`/shows` with filters,
+`/punt`) and all `/admin` and `POST` routes stay `force-dynamic` — but `/shows`
+wraps its heavy DB reads in `unstable_cache` (the Data Cache) so a flood of
+repeated filter URLs collapses to one Neon query per hour rather than one per
+render (this page, hammered ~164k times in a night, was what blew the transfer
+budget). The read-only GET API routes carry a short `s-maxage`
+(see [§9](#9-cross-cutting-design-decisions)).
 
 ### 4.1 Routes
 
@@ -135,6 +147,8 @@ Hosts everything humans see and most of what machines see. Single Next.js projec
 | `GET /shows/[slug]` | Show detail — performances, creators, content warnings, book tickets |
 | `GET /venues/[slug]` | Venue detail — Leaflet map, current shows, box office link |
 | `GET /about` | Static |
+| `GET /robots.txt` | Generated from `app/robots.ts` — allows content, disallows `/api`, `/admin`, `/r`, `/punt`, `/shows?` filter combos |
+| `GET /sitemap.xml` | Generated from `app/sitemap.ts` — static pages + every current show/venue detail URL |
 
 #### Admin pages (cookie-gated by `isAdmin()`)
 
@@ -157,7 +171,7 @@ Every endpoint validates input with the zod schemas from `@platform/shared`.
 | `GET /api/v1/venues/{id_or_slug}?include_shows=true` | `get_venue` | Optional `current_shows[]`. |
 | `GET /api/v1/whats-on` | `whats_on` | `when=tonight\|tomorrow\|this_weekend\|next_weekend\|this_week`, optional `near` (string or `{lat,lng}`), `max_price`. Time windows resolved in `Europe/London`. |
 | `POST /api/v1/recommend` | `recommend_shows` | Body `{ vibe, constraints?, exclude_genres?, limit? }`. Currently token-overlap; LLM-backed once `ANTHROPIC_API_KEY` wired. |
-| `POST /api/v1/events` | — | Client-side analytics `{ type, path?, target?, query? }`. |
+| `POST /api/v1/events` | — | Analytics `{ type, path?, target?, query? }`. The client `<VisitBeacon>` posts one `visit` per navigation here (page renders are cached, so visits can't be counted server-side anymore). Bot UAs are dropped — see `lib/track.ts#isBot`. |
 | `POST /api/v1/admin/refresh` | — | Admin-only. Dispatches `scrape.yml` via GitHub REST API. |
 | `GET /api/openapi` | — | OpenAPI 3.0 export consumed by the Custom GPT. |
 | `GET /r?type=outbound&target=<slug>&to=<url>` | — | Tracked redirect. Records outbound event, validates `to` is `http(s)://`, 302s. |
@@ -356,6 +370,7 @@ uv run scrape venue almeida                                   # one venue, parse
 uv run scrape venue almeida --enrich --replace --workers 4    # one venue, full pipeline
 uv run scrape all --enrich --replace --workers 16             # everything
 uv run scrape sync-venues ../../../theatres.yaml              # idempotent venue metadata sync
+uv run scrape prune-events --days 90                          # trim old analytics events (retention)
 ```
 
 ### 6.5 Environment
@@ -373,7 +388,7 @@ Workflow: `.github/workflows/scrape.yml` (at repo root, named **"Daily scrape"**
 
 `concurrency: group: scrape, cancel-in-progress: false` — overlapping runs queue.
 
-Job steps (ubuntu-latest, 45 min timeout, working dir `platform/apps/scrapers`):
+Job steps (ubuntu-latest, 75 min timeout, working dir `platform/apps/scrapers`):
 
 1. Checkout
 2. `astral-sh/setup-uv@v4` with `uv.lock` caching
@@ -382,7 +397,8 @@ Job steps (ubuntu-latest, 45 min timeout, working dir `platform/apps/scrapers`):
 5. `uv run scrapling install`
 6. `uv run scrape sync-venues ../../../theatres.yaml`
 7. `uv run scrape all --enrich --replace --workers 16`
-8. Smoke test (only if `vars.SITE_BASE_URL` is set): `curl $SITE_BASE_URL/api/v1/shows?limit=1` and assert `total > 100`
+8. `uv run scrape prune-events --days 90` (`always()` — retention, independent of the scrape result)
+9. Smoke test (only if `vars.SITE_BASE_URL` is set): `curl $SITE_BASE_URL/api/v1/shows?limit=1` and assert `total > 100`
 
 Typical run: ~17 minutes. Data is current by 05:20 UTC.
 
@@ -507,11 +523,17 @@ events (
   path         TEXT,
   target       TEXT,
   query        TEXT,
+  ua           TEXT,         -- capped to 200 chars; lets us spot bot floods
+  ip_prefix    TEXT,         -- /24 (or first 3 IPv6 groups) only — never a full IP
   occurred_at  TIMESTAMPTZ DEFAULT NOW()
 )
 ```
 
-No PII, no IP/UA columns by design.
+No full IP, no raw PII: `ip_prefix` is truncated to a /24 subnet and `ua` is
+capped — enough to identify a crawler subnet, not an individual. The table is
+**unbounded** (one row per tracked event) so it's pruned to a 90-day window by
+`scrape prune-events`, run daily from the scrape workflow. Known bots never
+reach it (`lib/track.ts#isBot`).
 
 ### 7.2 Applying the schema
 
@@ -569,7 +591,8 @@ const params = SearchShowsInput.parse(Object.fromEntries(req.nextUrl.searchParam
 | Auth | single password, SHA-256 cookie | no user management; admin is one person |
 | MCP isolation | wrapper-only, no DB access | API is source of truth; website + MCP can never diverge |
 | API versioning | `/api/v1/*` from day one | breaking changes go to `/v2` |
-| Caching | none on `/api/v1` — everything `force-dynamic` | small data, fresh always; revisit if Neon costs spike |
+| Caching | ISR (`revalidate=3600`) on content pages; `s-maxage=300` on read-only GET APIs; `force-dynamic` only where query-driven | the original "everything fresh per request" let overnight crawlers blow Neon's transfer budget — the data only changes daily, so cache it |
+| Bot handling | `robots.txt` + sitemap; `middleware.ts` 403s a curated list of abusive crawlers; bot UAs dropped from analytics | crawlers were the bulk of overnight load; caching neutralises cost, this trims the rest |
 | Search | Postgres FTS (tsvector, GIN) + pg_trgm | no separate search service; fuzzy venue lookup works |
 | Geo | PostGIS `GEOGRAPHY(POINT, 4326)` + `ST_DWithin` | one-line "within X km of London Bridge" |
 | Scraper concurrency | serial parse, parallel-by-host enrich, serial write | polite to source sites; resilient to per-venue failure |

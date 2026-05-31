@@ -115,10 +115,30 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
     bespoke adapter doesn't reset the "new this week" signal.
     """
     written = 0
+    shows = list(shows)
     with _conn() as conn, conn.cursor() as cur:
         venue_id = _venue_id_for(cur, theatre_slug)
         if venue_id is None:
             log.warning("unknown theatre_slug=%s — skipping write", theatre_slug)
+            return 0
+
+        # Guard against a transient empty scrape wiping a venue under --replace.
+        # `--replace` deletes the venue's rows before inserting the fresh set; if
+        # the adapter found nothing this run (a site blip / anti-bot hiccup during
+        # the daily run), deleting would blank the venue on the live site until
+        # the next good scrape. Keep the last-known-good rows instead — the next
+        # successful run refreshes them, and the venue-health monitor still flags
+        # the zero so it's visible. A genuine emptying is harmless: those rows
+        # have past end_dates and drop out of the date-filtered listings anyway.
+        if replace and not shows:
+            existing = _count_shows(cur, venue_id)
+            if existing:
+                log.warning(
+                    "%s: 0 shows parsed but %d already stored — skipping --replace "
+                    "wipe (likely a transient fetch failure)",
+                    theatre_slug,
+                    existing,
+                )
             return 0
 
         prior_first_seen: dict[str, str] = {}
@@ -130,7 +150,7 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
         # near-duplicates (e.g. nav links matched as cards) that all collapse
         # to the same slug after URL hashing — first one wins.
         seen_slugs: set[str] = set()
-        for s in list(shows):
+        for s in shows:
             slug = _slug_for(s)
             if slug in seen_slugs:
                 continue
@@ -222,6 +242,12 @@ def _venue_id_for(cur: psycopg.Cursor, slug: str) -> str | None:
     cur.execute("SELECT id FROM venues WHERE slug = %s", (slug,))
     row = cur.fetchone()
     return row[0] if row else None
+
+
+def _count_shows(cur: psycopg.Cursor, venue_id: str) -> int:
+    cur.execute("SELECT COUNT(*) FROM shows WHERE venue_id = %s", (venue_id,))
+    row = cur.fetchone()
+    return int(row[0]) if row else 0
 
 
 def _first_seen_by_url(cur: psycopg.Cursor, venue_id: str) -> dict[str, str]:

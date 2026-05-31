@@ -428,3 +428,20 @@ export async function closingSoon(days: number, limit: number): Promise<Show[]> 
   });
   return shows;
 }
+
+/**
+ * Slug + last-modified for every current/upcoming show, for the XML sitemap.
+ * Deliberately lean — no joins, no hydration — so generating the sitemap is one
+ * cheap scan. Past shows are dropped (their detail pages 404 once pruned).
+ */
+export async function sitemapShows(): Promise<
+  Array<{ slug: string; updated_at: string }>
+> {
+  return (await sql<{ slug: string; updated_at: string }[]>`
+    SELECT slug, updated_at
+      FROM shows
+     WHERE start_date IS NULL OR end_date IS NULL OR end_date >= CURRENT_DATE
+     ORDER BY updated_at DESC
+     LIMIT 5000
+  `) as Array<{ slug: string; updated_at: string }>;
+}

@@ -1,11 +1,13 @@
 import { listVenuesWithCounts } from '@/lib/queries/venues';
 import { pad3 } from '@/lib/format';
-import { trackEvent } from '@/lib/track';
 
-export const dynamic = 'force-dynamic';
+// ISR — the index only changes on the daily scrape, so the rendered HTML is
+// CDN-cached and refreshed hourly instead of re-querying Neon on every hit
+// (was force-dynamic; crawlers were hammering the DB). Visits are tracked
+// client-side via <VisitBeacon> in the layout.
+export const revalidate = 3600;
 
 export default async function HomePage() {
-  void trackEvent({ type: 'visit', path: '/' });
   let venues: Awaited<ReturnType<typeof listVenuesWithCounts>> = [];
   let error: string | null = null;
   try {

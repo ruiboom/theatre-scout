@@ -1,11 +1,29 @@
 import { notFound } from 'next/navigation';
-import { getVenue } from '@/lib/queries/venues';
+import { getVenue, sitemapVenues } from '@/lib/queries/venues';
 import type { VenueDetail } from '@platform/shared';
 import { fmtDateRange, fmtPrice, pad3 } from '@/lib/format';
 import { VenueMap } from '@/components/venue-map';
-import { trackEvent, trackedExternalHref } from '@/lib/track';
+import { trackedExternalHref } from '@/lib/track';
 
-export const dynamic = 'force-dynamic';
+// ISR — venue pages change only on the daily scrape. Cached per slug and
+// regenerated hourly so the hundreds of detail URLs crawlers sweep are served
+// from the CDN, not Neon (was force-dynamic). Visits tracked client-side via
+// <VisitBeacon> in the layout — `topVenueClicks` keys off the `/venues/<slug>`
+// path it records, so the admin metric is unaffected.
+export const revalidate = 3600;
+// See shows/[slug]: unknown slugs render on demand + cache rather than 404.
+export const dynamicParams = true;
+
+// Pre-render all venues at deploy onto the ISR path (see the matching note in
+// shows/[slug]). Without `generateStaticParams`, Next would keep `[slug]` fully
+// dynamic and hit Neon per request. Tolerant of a missing DB at build.
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  try {
+    return (await sitemapVenues()).map((v) => ({ slug: v.slug }));
+  } catch {
+    return [];
+  }
+}
 
 export default async function VenuePage({
   params,
@@ -15,7 +33,6 @@ export default async function VenuePage({
   const { slug } = await params;
   const v = (await getVenue({ slug, include_shows: true })) as VenueDetail | null;
   if (!v) notFound();
-  void trackEvent({ type: 'visit', path: `/venues/${slug}`, target: slug });
 
   const shows = v.current_shows;
 

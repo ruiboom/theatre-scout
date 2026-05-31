@@ -21,6 +21,21 @@ export interface TrackInput {
 }
 
 /**
+ * Cheap user-agent bot heuristic. Crawlers — not humans — were the bulk of the
+ * events table's overnight row growth, so we keep them out of analytics. Kept
+ * deliberately broad: a missed human is one lost (cheap) row, a logged bot is
+ * noise plus unbounded storage. This is NOT a security control — UAs are
+ * trivially spoofed; see `middleware.ts` for the hard block on the worst-behaved
+ * crawlers. Callers that pass no `ua` (no request context) are never filtered.
+ */
+const BOT_UA =
+  /bot\b|spider|crawl|slurp|mediapartners|facebookexternalhit|embedly|bytespider|ahrefs|semrush|petalbot|dataforseo|gptbot|claudebot|ccbot|bingpreview|yandex|baidu|sogou|headlesschrome|python-requests|curl\/|wget|node-fetch|axios|go-http|okhttp|java\//i;
+
+export function isBot(ua: string | null | undefined): boolean {
+  return !!ua && BOT_UA.test(ua);
+}
+
+/**
  * Insert a single event. Returns void; callers should NOT await unless they
  * need to ensure the row is persisted (rare).
  *
@@ -28,6 +43,9 @@ export interface TrackInput {
  * source-of-truth — losing a few rows on a glitchy DB connection is fine.
  */
 export async function trackEvent(input: TrackInput): Promise<void> {
+  // Drop known crawlers before they reach the DB. They were the main driver of
+  // the events table's unbounded overnight growth.
+  if (isBot(input.ua)) return;
   try {
     await sql`
       INSERT INTO events (type, path, target, query, ua, ip_prefix)

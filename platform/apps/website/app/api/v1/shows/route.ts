@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SearchShowsInput } from '@platform/shared';
 import { searchShows } from '@/lib/queries/shows';
-import { paramsFromUrl, parseInput } from '@/lib/api';
+import { API_CACHE_CONTROL, paramsFromUrl, parseInput } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,5 +18,7 @@ export async function GET(req: NextRequest) {
   );
   if (!parsed.ok) return parsed.response;
   const result = await searchShows(parsed.data);
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: { 'cache-control': API_CACHE_CONTROL },
+  });
 }

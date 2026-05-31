@@ -241,6 +241,15 @@ export async function getVenue(opts: {
   return venue;
 }
 
+/** Slug + last-modified for every venue, for the XML sitemap. */
+export async function sitemapVenues(): Promise<
+  Array<{ slug: string; updated_at: string }>
+> {
+  return (await sql<{ slug: string; updated_at: string }[]>`
+    SELECT slug, updated_at FROM venues ORDER BY name
+  `) as Array<{ slug: string; updated_at: string }>;
+}
+
 /** When was the most recent successful scrape across all venues? */
 export async function lastScrapeAt(): Promise<string | null> {
   const rows = (await sql<{ finished_at: string | null }[]>`

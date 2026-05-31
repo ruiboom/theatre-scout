@@ -14,8 +14,31 @@ import {
 } from '@/lib/calendar';
 import { trackEvent, trackedExternalHref } from '@/lib/track';
 import { sampleRandom } from '@/lib/random';
+import { headers } from 'next/headers';
+import { unstable_cache } from 'next/cache';
 
+// Stays dynamic: the listing is driven by the filter query string, so it can't
+// be cached by path. Per-visit tracking moved to <VisitBeacon> (client-side);
+// only the search-term signal is recorded here, and only for real users.
 export const dynamic = 'force-dynamic';
+
+// ...but each render runs a heavy `searchShows` (up to 200 rows). An overnight
+// bot hammering this one page ~164k times was the bulk of the Neon transfer
+// blowout. The page must stay dynamic, but its DB reads don't: cache them in the
+// Data Cache, keyed by the resolved query args, so identical filter URLs (the
+// common case — and what a repeat crawler hits) collapse to one Neon query per
+// hour instead of one per request. `robots.txt` already disallows `/shows?`
+// filter permutations; this caps the cost of any that slip through. `unstable_
+// cache` works inside a force-dynamic route — it caches the data, not the page.
+const cachedSearchShows = unstable_cache(searchShows, ['shows-index:search'], {
+  revalidate: 3600,
+  tags: ['shows'],
+});
+const cachedOpeningsByDay = unstable_cache(
+  openingsByDay,
+  ['shows-index:openings'],
+  { revalidate: 3600, tags: ['shows'] },
+);
 
 const CATEGORIES: Array<{ key: VenueCategory; label: string }> = [
   { key: 'major', label: 'Major producing houses' },
@@ -74,9 +97,12 @@ export default async function ShowsPage({
   const sp = await searchParams;
   const q = pickStr(sp.q);
 
-  // Page view + (if there's a search query) search tracking, fire-and-forget.
-  void trackEvent({ type: 'visit', path: '/shows' });
-  if (q) void trackEvent({ type: 'search', query: q });
+  // Search tracking, fire-and-forget. Pass the UA so `trackEvent` can drop
+  // crawlers; the page visit itself is logged client-side by <VisitBeacon>.
+  if (q) {
+    const ua = (await headers()).get('user-agent');
+    void trackEvent({ type: 'search', query: q, ua });
+  }
   const filterType = pickStr(sp.type);
   const filterCat = pickStr(sp.cat) as '' | VenueCategory;
   const filterWhen = pickStr(sp.when); // '', 'today', 'week', 'new', 'closing'
@@ -154,7 +180,7 @@ export default async function ShowsPage({
   let shows: Show[] = [];
   let error: string | null = null;
   try {
-    const result = await searchShows({
+    const result = await cachedSearchShows({
       q: q || undefined,
       show_type: showType,
       category: filterCat || undefined,
@@ -183,7 +209,7 @@ export default async function ShowsPage({
     calMonth = ym.month;
     calWeeks = monthGrid(calYear, calMonth);
     try {
-      const rows = await openingsByDay(calWeeks[0]![0]!.iso, calWeeks[5]![6]!.iso, {
+      const rows = await cachedOpeningsByDay(calWeeks[0]![0]!.iso, calWeeks[5]![6]!.iso, {
         category: filterCat || undefined,
         show_type: showType,
         q: q || undefined,

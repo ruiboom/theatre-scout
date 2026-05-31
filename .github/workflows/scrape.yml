@@ -82,6 +82,14 @@ jobs:
         # job continues — a few broken venues won't sink the whole run.
         run: uv run scrape all --enrich --replace --workers 16
 
+      - name: Prune old analytics events
+        # The `events` table grows one row per tracked visit and is never
+        # otherwise trimmed. Retention rides this daily cron (the one job that
+        # already holds a direct Neon connection). `always()` so it runs even if
+        # some venues failed above — it's independent of the scrape outcome.
+        if: ${{ always() }}
+        run: uv run scrape prune-events --days 90
+
       - name: Smoke-test live API
         if: ${{ vars.SITE_BASE_URL != '' }}
         working-directory: ${{ github.workspace }}

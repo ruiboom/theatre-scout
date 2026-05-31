@@ -22,7 +22,7 @@ from .health import unhealthy_venues
 from .http import Client
 from .models import Theatre
 from .runner import run_all, run_one
-from .writer import upsert_theatres
+from .writer import prune_events, upsert_theatres
 
 app = typer.Typer(
     help="Scrape London theatre listings into the platform DB.",
@@ -106,6 +106,23 @@ def health(
             )
     if rows:
         raise typer.Exit(code=1)
+
+
+@app.command("prune-events")
+def prune_events_cmd(
+    days: int = typer.Option(
+        90, "--days", help="Delete analytics events older than this many days."
+    ),
+) -> None:
+    """Trim the analytics `events` table (retention).
+
+    The table grows one row per tracked visit/search/outbound click and is never
+    otherwise pruned. Run daily from the scrape workflow to keep it (and the DB)
+    from growing without bound.
+    """
+    _setup_logging()
+    n = prune_events(days)
+    typer.echo(f"Pruned {n} event(s) older than {days} days.")
 
 
 @app.command("sync-venues")

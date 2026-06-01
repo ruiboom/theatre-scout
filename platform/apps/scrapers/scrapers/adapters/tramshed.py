@@ -53,12 +53,7 @@ class TramshedAdapter(BaseAdapter):
     requires_js = False  # stealth forced in fetch(); keeps enrich cheap
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        resp = client.get(self.url, stealth=True)
-        if resp is None:
-            return []
-        text = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
-            "utf-8", errors="replace"
-        )
+        text = self._response_text(client.get(self.url, stealth=True))
         return self.parse(text, self.url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:

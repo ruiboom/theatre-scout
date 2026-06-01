@@ -55,22 +55,15 @@ class BreadAndRosesAdapter(BaseAdapter):
     requires_js = False
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        resp = client.get(self.url, stealth=False)
-        if resp is None:
-            return []
-        page_html = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
-            "utf-8", errors="replace"
-        )
+        page_html = self._response_text(client.get(self.url, stealth=False))
         m = _APIKEY_RE.search(page_html)
         if m is None:
+            # Page loaded fine but the publishable key is gone — a site-structure
+            # change, not a fetch failure. Stays an empty (parse-level) result, so
+            # the health monitor flags it as silent-zero rather than failed.
             return []
         cal_url = f"https://calendar.lineupnow.com?apiKey={m.group(1)}"
-        cal = client.get(cal_url, stealth=True)
-        if cal is None:
-            return []
-        cal_html = getattr(cal, "text", "") or getattr(cal, "content", b"").decode(
-            "utf-8", errors="replace"
-        )
+        cal_html = self._response_text(client.get(cal_url, stealth=True), url=cal_url)
         return self.parse(cal_html, cal_url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:

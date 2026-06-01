@@ -30,12 +30,7 @@ class HopeTheatreAdapter(BaseAdapter):
     requires_js = False  # stealth forced in fetch(); keeps enrich cheap
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        resp = client.get(self.url, stealth=True)
-        if resp is None:
-            return []
-        text = getattr(resp, "text", "") or getattr(resp, "content", b"").decode(
-            "utf-8", errors="replace"
-        )
+        text = self._response_text(client.get(self.url, stealth=True))
         return self.parse(text, self.url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:
@@ -44,9 +39,7 @@ class HopeTheatreAdapter(BaseAdapter):
         info_urls: list[str] = []
         for a in page.css('a[aria-label="INFORMATION"]'):
             href = str(a.attrib.get("href", "")).split("#", 1)[0].split("?", 1)[0]
-            if "thehopetheatre.com/" in href and not href.rstrip("/").endswith(
-                "what-s-on"
-            ):
+            if "thehopetheatre.com/" in href and not href.rstrip("/").endswith("what-s-on"):
                 info_urls.append(href)
 
         titles: list[str] = []

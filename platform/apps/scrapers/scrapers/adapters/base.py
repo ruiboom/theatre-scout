@@ -12,6 +12,18 @@ class _ClientLike(Protocol):
     def get(self, url: str, *, stealth: bool = False) -> object | None: ...
 
 
+class FetchError(RuntimeError):
+    """The listing fetch did not yield a usable page.
+
+    Raised for a missing response (network error / timeout / robots-disallowed,
+    all surfaced by `client.get` as None) or an HTTP error status (>= 400 — e.g.
+    a 503 maintenance page or a 403 anti-bot block). The orchestrator catches it
+    and records a `failed` ScrapeRun, so a fetch failure is no longer recorded as
+    a successful scrape that happened to find nothing — a "silent zero" that the
+    venue-health monitor couldn't tell apart from a genuinely empty listing.
+    """
+
+
 class BaseAdapter(ABC):
     """Per-theatre adapter. Subclasses must define `slug`, `url`, and `parse(html, base_url)`.
 
@@ -58,10 +70,24 @@ class BaseAdapter(ABC):
         return out
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        resp = client.get(self.url, stealth=self.requires_js)
+        text = self._response_text(client.get(self.url, stealth=self.requires_js))
+        return self.parse(text, self.url)
+
+    def _response_text(self, resp: object | None, *, url: str | None = None) -> str:
+        """Validate a fetch response and return its decoded body.
+
+        Raises `FetchError` on a missing response (None) or an HTTP error status
+        (>= 400). Shared by every `fetch()` — including the stealth-forcing and
+        multi-hop overrides — so a dead fetch raises everywhere instead of
+        silently returning `[]`. `url` overrides the URL named in the error (for
+        multi-hop adapters that fetch something other than `self.url`).
+        """
+        where = url or self.url
         if resp is None:
-            return []
-        text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
+            raise FetchError(f"no response for {where} (fetch failed or robots-disallowed)")
+        status = getattr(resp, "status_code", None)
+        if status is not None and status >= 400:
+            raise FetchError(f"HTTP {status} for {where}")
+        return getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
             "utf-8", errors="replace"
         )
-        return self.parse(text, self.url)

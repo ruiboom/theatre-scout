@@ -34,7 +34,7 @@ from scrapling.parser import Selector
 from ..classify import classify
 from ..models import Show
 from ..text import clean_text
-from .base import BaseAdapter, _ClientLike
+from .base import BaseAdapter, FetchError, _ClientLike
 from .registry import register
 
 log = logging.getLogger(__name__)
@@ -81,15 +81,17 @@ class SohoTheatreAdapter(BaseAdapter):
         seen_urls: set[str] = set()
         shows: list[Show] = []
         next_url: str | None = self.url
-        for _ in range(_MAX_PAGES):
+        for i in range(_MAX_PAGES):
             if next_url is None:
                 break
-            resp = client.get(next_url)
-            if resp is None:
+            try:
+                text = self._response_text(client.get(next_url), url=next_url)
+            except FetchError:
+                # A dead first page is a failed run; a later page failing just
+                # ends pagination with the shows gathered so far (partial).
+                if i == 0:
+                    raise
                 break
-            text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
-                "utf-8", errors="replace"
-            )
             page_shows, next_url = self._parse_page(text, next_url)
             for s in page_shows:
                 if str(s.url) in seen_urls:

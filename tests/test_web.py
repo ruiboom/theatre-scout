@@ -144,7 +144,7 @@ def test_home_renders_last_refresh_label(client: TestClient) -> None:
     r = client.get("/")
     assert r.status_code == 200
     # No scrape recorded in the seed fixture → "never"
-    assert "Last: never" in r.text
+    assert "Last · never" in r.text
 
 
 def test_home_lists_categories(client: TestClient) -> None:

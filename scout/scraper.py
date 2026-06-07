@@ -139,6 +139,23 @@ def _write_shows(
     Preserves first_seen_at across --replace by URL: lets the "New shows" query
     keep working when a bespoke adapter changes a title shape.
     """
+    # Guard against a transient empty scrape wiping a venue under --replace.
+    # `--replace` deletes the venue's rows before inserting the fresh set; if the
+    # adapter found nothing this run (a site blip / anti-bot hiccup), deleting
+    # would blank the venue until the next good scrape. Keep the last-known-good
+    # rows instead — the next successful run refreshes them. A genuine emptying is
+    # harmless: those rows carry past end_dates and drop out of the upcoming query.
+    # Mirrors platform/apps/scrapers/scrapers/writer.py::write_shows.
+    if replace and not shows:
+        existing = db.count_shows_for_theatre(conn, slug)
+        if existing:
+            log.warning(
+                "%s: 0 shows parsed but %d already stored — skipping --replace "
+                "wipe (likely a transient fetch failure)",
+                slug,
+                existing,
+            )
+        return
     prior_first_seen: dict[str, str] = {}
     if replace:
         prior_first_seen = db.first_seen_by_url(conn, slug)

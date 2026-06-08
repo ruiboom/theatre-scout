@@ -145,6 +145,12 @@ def delete_shows_for_theatre(conn: sqlite3.Connection, slug: str) -> int:
     return cursor.rowcount
 
 
+def count_shows_for_theatre(conn: sqlite3.Connection, slug: str) -> int:
+    """Number of rows currently stored for `slug`."""
+    row = conn.execute("SELECT COUNT(*) FROM shows WHERE theatre_slug = ?", (slug,)).fetchone()
+    return int(row[0]) if row else 0
+
+
 def record_scrape_run(conn: sqlite3.Connection, run: ScrapeRun) -> int:
     cursor = conn.execute(
         """

@@ -280,10 +280,7 @@ def shows_page(
         return "/shows" + (("?" + urlencode(cleaned)) if cleaned else "")
 
     def sort_url(field: str) -> str:
-        if sort_field == field:
-            new_dir = "asc" if descending else "desc"
-        else:
-            new_dir = "asc"
+        new_dir = ("asc" if descending else "desc") if sort_field == field else "asc"
         return chip_url(sort=field, dir=new_dir if new_dir != "asc" else "")
 
     # Hidden inputs for the search form: preserve everything except q.

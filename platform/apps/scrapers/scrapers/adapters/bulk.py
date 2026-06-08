@@ -14,10 +14,9 @@ from ..models import ShowType
 from ._generic import GenericAdapter
 from .registry import register
 
-# Venues that need a real browser to render content (or to defeat anti-bot blocking).
-# `hen-and-chickens` and `tabard` were initially added here but the stealth
-# browser still couldn't reach them (DNS / cert issues, repeated timeouts).
-# Keeping them in `_JS_VENUES` cost ~3 min per scrape on retries — drop instead.
+# Venues that need a real browser to render content (or to defeat anti-bot
+# blocking). `hen-and-chickens` and `tabard` were dropped from the scrape
+# entirely (2026-06) — see the note above `_ENTRIES`.
 _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
 }
@@ -27,10 +26,16 @@ _JS_VENUES: set[str] = {
 # C) all still take precedence, so genuine plays/musicals here stay correct.
 _DEFAULT_SHOW_TYPE: dict[str, ShowType] = {
     "backyard-comedy-club": "comedy",
-    "hen-and-chickens": "comedy",
     "underbelly-boulevard": "comedy",
 }
 
+# Dropped 2026-06 (sites unreachable — not adapter bugs, so removed rather than
+# left to fail forever): `hen-and-chickens` (henandchickens.com is dead; its
+# operator Unrestricted View lives at unrestrictedview.co.uk, JS-rendered, would
+# need a fresh adapter) and `tabard` (tabardtheatre.co.uk serves a self-signed
+# TLS cert). Both venue rows are deactivated in migration 0005 so venue_health
+# stops flagging them; they stay in theatres.yaml for when their sites return.
+#
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
 _ENTRIES: list[tuple[str, str, str]] = [
     # --- major ---
@@ -72,10 +77,8 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("camden-peoples", "https://cptheatre.co.uk/whats-on", ".event"),
     ("cockpit", "https://www.thecockpit.org.uk/", 'a[href*="/show/"]'),
     ("finborough", "https://www.finboroughtheatre.co.uk/productions", 'a[href*="/productions/"]'),
-    ("hen-and-chickens", "https://henandchickens.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("jermyn-street", "https://www.jermynstreettheatre.co.uk/now-next/", 'a[href*="/show/"]'),
     ("kings-head", "https://kingsheadtheatre.com/whats-on", 'a[href*="/whats-on/"]'),
-    ("tabard", "https://tabardtheatre.co.uk/whats-on/", 'a[href*="/whats-on/"]'),
     ("tara", "https://taratheatre.com/whats-on/", 'a[href*="/whats-on/"]'),
     ("theatre503", "https://theatre503.com/whats-on/", ".listing"),
     # --- outer ---

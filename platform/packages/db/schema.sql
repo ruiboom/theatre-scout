@@ -29,6 +29,10 @@ CREATE TABLE venues (
     location            GEOGRAPHY(POINT, 4326),
     website             TEXT NOT NULL DEFAULT '',
     category            TEXT NOT NULL CHECK (category IN ('major','mid','fringe','outer')),
+    -- False drops a venue from the scrape + venue_health without deleting it
+    -- (reversible). Used for venues whose sites are unreachable; see
+    -- migrations/0005_venue_active_flag.sql.
+    active              BOOLEAN NOT NULL DEFAULT TRUE,
     raw_data            JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -233,4 +237,5 @@ SELECT
     END                          AS reason
   FROM venues v
   LEFT JOIN latest   l ON l.venue_slug = v.slug
-  LEFT JOIN baseline b ON b.venue_slug = v.slug;
+  LEFT JOIN baseline b ON b.venue_slug = v.slug
+ WHERE v.active;

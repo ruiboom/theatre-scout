@@ -354,6 +354,9 @@
   category: fringe
   url: https://finboroughtheatre.co.uk
 
+# Inactive (dropped from scrape 2026-06): henandchickens.com is dead; the
+# operator Unrestricted View (unrestrictedview.co.uk) is JS-rendered. Venue row
+# deactivated in db migration 0005. Re-enable when a working source exists.
 - slug: hen-and-chickens
   name: Hen & Chickens Theatre
   area: Highbury
@@ -410,6 +413,9 @@
   category: fringe
   url: https://space.org.uk
 
+# Inactive (dropped from scrape 2026-06): tabardtheatre.co.uk serves a
+# self-signed TLS cert, so the fetcher refuses the handshake. Venue row
+# deactivated in db migration 0005. Re-enable when their cert is fixed.
 - slug: tabard
   name: Tabard Theatre
   area: Chiswick

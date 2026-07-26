@@ -33,7 +33,7 @@ class _Client:
         self._resp = resp
         self.calls: list[str] = []
 
-    def get(self, url: str, *, stealth: bool = False) -> object | None:
+    def get(self, url: str, *, stealth: bool = False, ignore_robots: bool = False) -> object | None:
         self.calls.append(url)
         return self._resp
 
@@ -58,8 +58,11 @@ def test_fetch_raises_on_none() -> None:
         _Adapter().fetch(_Client(None))
 
 
-@pytest.mark.parametrize("status", [403, 429, 503])
-def test_fetch_raises_on_http_error(status: int) -> None:
+# 202: some WAFs (Southwark Playhouse, Theatre503) serve their JS-challenge
+# interstitial with a 2xx status — it parses as zero shows, so any non-200 must
+# fail loudly rather than record a silent-zero success.
+@pytest.mark.parametrize("status", [202, 403, 429, 503])
+def test_fetch_raises_on_non_200(status: int) -> None:
     with pytest.raises(FetchError):
         _Adapter().fetch(_Client(_Resp(status)))
 

@@ -9,7 +9,9 @@ from ..models import Show
 
 
 class _ClientLike(Protocol):
-    def get(self, url: str, *, stealth: bool = False) -> object | None: ...
+    def get(
+        self, url: str, *, stealth: bool = False, ignore_robots: bool = False
+    ) -> object | None: ...
 
 
 class FetchError(RuntimeError):
@@ -44,6 +46,12 @@ class BaseAdapter(ABC):
     #: The orchestrator routes these via the stealth (Patchright) path.
     requires_js: bool = False
 
+    #: True when only the *listing* fetch needs the stealth browser (a WAF that
+    #: challenges or blocks datacenter IPs on the fast path). Unlike requires_js
+    #: it does not put the enrich phase's per-show fetches on the stealth path,
+    #: so one blocked listing doesn't cost a browser render per show page.
+    stealth_listing: bool = False
+
     @abstractmethod
     def parse(self, html: str, base_url: str) -> list[Show]:
         """Pure parser: HTML → list of Show. No IO."""
@@ -70,23 +78,27 @@ class BaseAdapter(ABC):
         return out
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        text = self._response_text(client.get(self.url, stealth=self.requires_js))
+        stealth = self.requires_js or self.stealth_listing
+        text = self._response_text(client.get(self.url, stealth=stealth))
         return self.parse(text, self.url)
 
     def _response_text(self, resp: object | None, *, url: str | None = None) -> str:
         """Validate a fetch response and return its decoded body.
 
-        Raises `FetchError` on a missing response (None) or an HTTP error status
-        (>= 400). Shared by every `fetch()` — including the stealth-forcing and
-        multi-hop overrides — so a dead fetch raises everywhere instead of
-        silently returning `[]`. `url` overrides the URL named in the error (for
+        Raises `FetchError` on a missing response (None) or any non-200 status.
+        Shared by every `fetch()` — including the stealth-forcing and multi-hop
+        overrides — so a dead fetch raises everywhere instead of silently
+        returning `[]`. Non-200 covers more than errors >= 400: some WAFs serve
+        their JS-challenge interstitial with a 202 (Southwark Playhouse,
+        Theatre503), which parses as zero shows and used to be recorded as a
+        silent-zero success. `url` overrides the URL named in the error (for
         multi-hop adapters that fetch something other than `self.url`).
         """
         where = url or self.url
         if resp is None:
             raise FetchError(f"no response for {where} (fetch failed or robots-disallowed)")
         status = getattr(resp, "status_code", None)
-        if status is not None and status >= 400:
+        if status is not None and status != 200:
             raise FetchError(f"HTTP {status} for {where}")
         return getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
             "utf-8", errors="replace"

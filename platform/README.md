@@ -545,15 +545,20 @@ psql "$DATABASE_URL" -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
 psql "$DATABASE_URL" -f packages/db/schema.sql
 ```
 
-Migrations (rarely; applied in numeric order):
+Migrations live in `packages/db/migrations/`, numbered, committed to git.
+The "Apply DB migrations" step of `.github/workflows/scrape.yml` applies any
+new ones automatically on each daily run, tracked in a `schema_migrations`
+ledger table (0001–0004 predate the ledger and are seeded as applied). "Apply
+by hand" was the old process; it broke down once no local machine held a prod
+credential — 0005 sat unapplied for weeks. To apply one immediately instead of
+waiting for the cron, dispatch the workflow from the Actions tab, or:
 
 ```bash
-psql "$DATABASE_URL" -f packages/db/migrations/0001_init.sql
-psql "$DATABASE_URL" -f packages/db/migrations/0002_align_with_scout.sql
-psql "$DATABASE_URL" -f packages/db/migrations/0003_events.sql
+psql "$DATABASE_URL" -f packages/db/migrations/000X_whatever.sql
 ```
 
-There is no migration runner — they're applied by hand and committed to git. Acceptable at this scale; revisit if it stops being so.
+(hand-applied migrations are picked up by the ledger step as long as they run
+idempotently — every migration since 0004 is written to be re-runnable).
 
 ---
 

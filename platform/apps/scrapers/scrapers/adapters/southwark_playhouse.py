@@ -27,6 +27,11 @@ from .registry import register
 class SouthwarkPlayhouseAdapter(BaseAdapter):
     slug = "southwark-playhouse"
     url = "https://southwarkplayhouse.co.uk/"
+    # The site's WAF answers datacenter IPs (the daily cron) with a 202
+    # JS-challenge interstitial — zero cards — while residential traffic gets
+    # the real page. The stealth browser sits the challenge out; listing only,
+    # so enrich stays off the browser path.
+    stealth_listing = True
 
     def parse(self, html: str, base_url: str) -> list[Show]:
         page = Selector(html)

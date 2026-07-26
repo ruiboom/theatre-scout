@@ -21,6 +21,17 @@ _JS_VENUES: set[str] = {
     "seven-dials-playhouse",
 }
 
+# Venues whose WAF blocks the fast HTTP path from datacenter IPs (the daily
+# GitHub Actions cron) but serves residential traffic fine: young-vic hard-403s,
+# theatre503 answers with a 202 JS-challenge interstitial. Only the *listing*
+# goes through the stealth browser — unlike `_JS_VENUES` this keeps the enrich
+# phase's per-show fetches on the fast path (they may fail, which enrich
+# tolerates; a browser render per show page is the expensive part).
+_STEALTH_LISTING_VENUES: set[str] = {
+    "young-vic",
+    "theatre503",
+}
+
 # Venues whose programme is overwhelmingly stand-up/comedy. This is only the
 # fallback default — JSON-LD type, site genre and title keywords (steps D and
 # C) all still take precedence, so genuine plays/musicals here stay correct.
@@ -35,6 +46,11 @@ _DEFAULT_SHOW_TYPE: dict[str, ShowType] = {
 # need a fresh adapter) and `tabard` (tabardtheatre.co.uk serves a self-signed
 # TLS cert). Both venue rows are deactivated in migration 0005 so venue_health
 # stops flagging them; they stay in theatres.yaml for when their sites return.
+#
+# Dropped 2026-07: `blue-elephant` — the theatre has surrendered its building
+# (announcement on blueelephanttheatre.co.uk/whatson: participation work
+# continues, but no venue and no shows; "much of our website is now out of
+# date"). Deactivated in migration 0006; restore here if it re-opens.
 #
 # (slug, url, selector). slug==key in theatres.yaml; almeida lives in its own file.
 _ENTRIES: list[tuple[str, str, str]] = [
@@ -73,7 +89,6 @@ _ENTRIES: list[tuple[str, str, str]] = [
     ("wiltons", "https://wiltons.org.uk/whats-on/", 'a[href*="/whats-on/"]'),
     # --- fringe ---
     ("backyard-comedy-club", "https://backyardcomedyclub.co.uk/events/", 'a[href*="/event/"]'),
-    ("blue-elephant", "https://blueelephanttheatre.co.uk/whatson", "div.contentblock"),
     ("camden-peoples", "https://cptheatre.co.uk/whats-on", ".event"),
     ("cockpit", "https://www.thecockpit.org.uk/", 'a[href*="/show/"]'),
     ("finborough", "https://www.finboroughtheatre.co.uk/productions", 'a[href*="/productions/"]'),
@@ -100,6 +115,7 @@ def _make_adapter(slug: str, url: str, card_selector: str) -> type[GenericAdapte
             "url": url,
             "card_selector": card_selector,
             "requires_js": slug in _JS_VENUES,
+            "stealth_listing": slug in _STEALTH_LISTING_VENUES,
             "default_show_type": _DEFAULT_SHOW_TYPE.get(slug, "play"),
         },
     )

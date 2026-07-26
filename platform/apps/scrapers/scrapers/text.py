@@ -57,10 +57,5 @@ def clean_description(text: str) -> str:
 
 def slugify(value: str) -> str:
     """Lower, ascii-fold, hyphen-collapse. Stable for re-runs of the same show."""
-    folded = (
-        unicodedata.normalize("NFKD", value)
-        .encode("ascii", "ignore")
-        .decode("ascii")
-        .lower()
-    )
+    folded = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii").lower()
     return _SLUG_RE.sub("-", folded).strip("-")

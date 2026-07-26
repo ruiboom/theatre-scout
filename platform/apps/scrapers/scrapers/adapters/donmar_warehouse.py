@@ -1,32 +1,56 @@
-"""Donmar Warehouse — uses the shared Spektrix Vue.js c-media parser since the
-generic adapter would pick up "Book now" / "More info" anchors as titles.
+"""Donmar Warehouse — reads the venue's public Spektrix API.
 
-See `scout/adapters/_c_media.py` for the markup contract.
+donmarwarehouse.com hard-403s GitHub Actions' IP ranges: the fast path was
+blocked first, and the stealth-browser fallback (2026-06) turned out to be
+blocked at the same layer, so every cron scrape failed. The Spektrix events
+feed is the same data the site's own front-end renders, minus the WAF — see
+`_spektrix.py` for the trade-offs.
+
+Productions are the events whose `attribute_AccountCode` sits under the
+`10000/102/` ledger prefix; member events, script conversations and Spektrix
+test entries have other codes or none. Show URLs use the site's CMS slug
+pattern (`/events/<slugified-name>`), which matches every current production.
 """
 
 from __future__ import annotations
 
+from datetime import date
+from typing import Any
+
 from ..models import Show
-from ._c_media import parse_c_media
+from . import _spektrix
 from .base import BaseAdapter, _ClientLike
 from .registry import register
+
+_PRODUCTION_ACCOUNT_PREFIX = "10000/102/"
+
+
+def _keep(event: dict[str, Any]) -> bool:
+    return str(event.get("attribute_AccountCode") or "").startswith(_PRODUCTION_ACCOUNT_PREFIX)
+
+
+def _make_url(event: dict[str, Any]) -> str:
+    slug = _spektrix.event_page_slug(str(event.get("name") or ""))
+    return f"https://www.donmarwarehouse.com/events/{slug}"
 
 
 @register
 class DonmarWarehouseAdapter(BaseAdapter):
     slug = "donmar-warehouse"
-    url = "https://www.donmarwarehouse.com/whats-on/"
-    requires_js = False  # see fetch(): stealth is forced for the listing only
+    url = _spektrix.events_url("donmarwarehouse")
+    requires_js = False
 
     def fetch(self, client: _ClientLike) -> list[Show]:
-        # The fast HTTP path is 403'd from datacenter IPs (the daily GitHub
-        # Actions cron) but works from residential ones — the venue's WAF blocks
-        # the runner's IP range. Route the listing through the stealth browser to
-        # try to get past it. requires_js stays False so the enrich phase doesn't
-        # stealth-render every show page (the listing is the only blocked fetch),
-        # and parse_c_media yields the same cards from rendered HTML as static.
-        text = self._response_text(client.get(self.url, stealth=True))
+        # ignore_robots: system.spektrix.com blanket-Disallows crawlers, but the
+        # v3 API is its documented public integration surface — see Client.get.
+        text = self._response_text(client.get(self.url, ignore_robots=True))
         return self.parse(text, self.url)
 
     def parse(self, html: str, base_url: str) -> list[Show]:
-        return parse_c_media(html, base_url, theatre_slug=self.slug)
+        return _spektrix.parse_events(
+            html,
+            theatre_slug=self.slug,
+            keep=_keep,
+            make_url=_make_url,
+            today=date.today(),
+        )

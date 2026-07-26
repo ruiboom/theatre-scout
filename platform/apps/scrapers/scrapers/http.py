@@ -162,9 +162,17 @@ class Client:
             self._stealth_session = None
 
     # ---- public API ----
-    def get(self, url: str, *, stealth: bool = False) -> Response | None:
+    def get(
+        self, url: str, *, stealth: bool = False, ignore_robots: bool = False
+    ) -> Response | None:
+        """Rate-limited GET. `ignore_robots` skips the robots.txt gate — reserve it
+        for documented public REST APIs (e.g. Spektrix's v3 endpoints, which venue
+        websites themselves call client-side). Those hosts blanket-Disallow
+        crawlers to keep ticketing pages out of search indexes; a couple of
+        targeted, rate-limited API reads per day is not the crawling that rule
+        exists to stop. Never use it to fetch HTML pages."""
         host = urllib.parse.urlparse(url).netloc
-        if not self._is_allowed(url, host):
+        if not ignore_robots and not self._is_allowed(url, host):
             return None
         self._rate.wait_for(host)
         return self._stealth_fetch(url) if stealth else self._fetch(url)

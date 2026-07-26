@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 
 
 class _ClientLike(Protocol):
-    def get(self, url: str, *, stealth: bool = False) -> object | None: ...
+    def get(
+        self, url: str, *, stealth: bool = False, ignore_robots: bool = False
+    ) -> object | None: ...
 
 
 def _utcnow() -> datetime:
@@ -202,6 +204,13 @@ def _enrich(s: Show, client: _ClientLike) -> Show:
         log.warning("enrich: %s fetch failed: %s", s.url, exc)
         return s
     if resp is None:
+        return s
+    status = getattr(resp, "status_code", None)
+    if status is not None and status != 200:
+        # A blocked or challenged detail page (403 WAF block, 202 interstitial)
+        # must not feed the extractors — they'd scrape the block page's text
+        # into the show's description/image.
+        log.warning("enrich: %s returned HTTP %s — skipping", s.url, status)
         return s
     text = getattr(resp, "text", None) or getattr(resp, "content", b"").decode(
         "utf-8", errors="replace"

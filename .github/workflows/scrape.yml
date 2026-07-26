@@ -70,6 +70,38 @@ jobs:
       - name: Install scrapling browser
         run: uv run scrapling install
 
+      - name: Apply DB migrations
+        # packages/db/migrations used to be "apply by hand", and 0005 sat
+        # unapplied for weeks (nobody has a psql-able prod credential locally —
+        # by design). This step applies anything new on every run, tracked in a
+        # `schema_migrations` ledger. 0001–0004 predate the ledger and are
+        # seeded as already applied.
+        working-directory: platform/packages/db
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -c "
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+              filename   TEXT PRIMARY KEY,
+              applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            INSERT INTO schema_migrations (filename)
+            VALUES ('0001_init.sql'), ('0002_align_with_scout.sql'),
+                   ('0003_events.sql'), ('0004_venue_health_view.sql')
+            ON CONFLICT DO NOTHING;"
+          for f in migrations/*.sql; do
+            name=$(basename "$f")
+            applied=$(psql "$DATABASE_URL" -tAc \
+              "SELECT 1 FROM schema_migrations WHERE filename = '$name'")
+            if [ "$applied" = "1" ]; then
+              echo "skip  $name (already applied)"
+              continue
+            fi
+            echo "apply $name"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -c \
+              "INSERT INTO schema_migrations (filename) VALUES ('$name')"
+          done
+
       - name: Sync venues from theatres.yaml
         # Idempotent. Picks up venue metadata changes (postcode, neighbourhood,
         # category, website) without touching shows.

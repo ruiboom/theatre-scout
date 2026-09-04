@@ -24,6 +24,7 @@ on:
 permissions:
   contents: read
   issues: write   # the venue-health step opens/closes a rolling issue
+  id-token: write # mint an OIDC token to authenticate the site-cache purge
 
 # Don't let two scrape runs overlap; let an in-flight one finish.
 concurrency:
@@ -108,11 +109,35 @@ jobs:
         run: uv run scrape sync-venues ../../../theatres.yaml
 
       - name: Scrape all venues into Neon
-        # `--enrich` fetches each show's detail page; `--replace` wipes prior
-        # rows per venue on success; `--workers 16` fans enrichment across
+        # `--enrich` fetches each show's detail page; `--replace` deletes rows
+        # that dropped off a venue's listing (the rest are upserted in place so
+        # ids and updated_at stay honest); `--workers 16` fans enrichment across
         # hosts. Failed adapters are recorded as `failed` scrape_runs and the
         # job continues — a few broken venues won't sink the whole run.
         run: uv run scrape all --enrich --replace --workers 16
+
+      - name: Purge the site cache
+        # The site's pages are ISR with a 6 h fallback TTL and its data reads
+        # sit in Vercel's Data Cache — the data only changes here, once a day,
+        # so nothing else needs to expire them. Tell the site the new data has
+        # landed. Auth is a GitHub OIDC token: the endpoint verifies it against
+        # GitHub's JWKS and only accepts this repo's `main` — no secret to keep
+        # in sync between GitHub and Vercel. Advisory: a failure here means
+        # pages refresh on their fallback TTL instead, not a broken site.
+        if: ${{ vars.SITE_BASE_URL != '' }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          oidc=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=theatre-scout-revalidate" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
+          code=$(curl -sS -o "$RUNNER_TEMP/revalidate.json" -w "%{http_code}" \
+            -X POST -H "Authorization: Bearer $oidc" \
+            "${{ vars.SITE_BASE_URL }}/api/v1/admin/revalidate")
+          cat "$RUNNER_TEMP/revalidate.json"; echo
+          if [ "$code" != "200" ]; then
+            echo "::warning::Site cache purge returned HTTP $code — pages will refresh on their fallback TTL"
+          fi
 
       - name: Prune old analytics events
         # The `events` table grows one row per tracked visit and is never

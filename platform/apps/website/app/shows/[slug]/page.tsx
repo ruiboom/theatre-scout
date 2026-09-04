@@ -6,7 +6,7 @@ import { trackedExternalHref } from '@/lib/track';
 // ISR — show pages change only on the daily scrape. Cached per slug and
 // regenerated hourly so crawler sweeps of the detail URLs hit the CDN, not Neon
 // (was force-dynamic). Visits tracked client-side via <VisitBeacon>.
-export const revalidate = 3600;
+export const revalidate = 21600;
 // Explicit (this is the default): slugs not returned by generateStaticParams —
 // e.g. shows added by the daily scrape after the last deploy — render on demand
 // and are then cached, rather than 404ing. Without this guarantee a new show

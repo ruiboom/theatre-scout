@@ -10,6 +10,7 @@ import {
   type VenueHealthRow,
 } from '@/lib/queries/events';
 import { fmtRelative } from '@/lib/format';
+import { revalidateSite } from '@/lib/revalidate';
 
 export const metadata = { title: 'Admin · Dashboard' };
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,13 @@ async function logout() {
   'use server';
   await clearAdminCookie();
   redirect('/admin/login');
+}
+
+async function purgeCache() {
+  'use server';
+  if (!(await isAdmin())) redirect('/admin/login');
+  revalidateSite();
+  redirect('/admin?purged=1');
 }
 
 async function triggerRefresh() {
@@ -63,7 +71,7 @@ async function triggerRefresh() {
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ triggered?: string; error?: string }>;
+  searchParams: Promise<{ triggered?: string; purged?: string; error?: string }>;
 }) {
   if (!(await isAdmin())) redirect('/admin/login');
   const sp = await searchParams;
@@ -111,6 +119,11 @@ export default async function AdminDashboardPage({
 
       <section className="controls" style={{ marginBottom: 24 }}>
         <div className="controls-l" style={{ display: 'flex', gap: 12 }}>
+          <form action={purgeCache}>
+            <button type="submit" className="ts-btn" title="Mark every cached page and data read stale; the next visit re-renders it from Neon">
+              Purge page cache
+            </button>
+          </form>
           <form action={triggerRefresh}>
             <button type="submit" className="ts-btn ts-btn--primary">
               Refresh data ▶

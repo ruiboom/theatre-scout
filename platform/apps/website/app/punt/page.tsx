@@ -4,8 +4,20 @@ import { fmtDateRange, fmtPrice } from '@/lib/format';
 import { londonToday, resolveWindow } from '@/lib/time';
 import { pickOne } from '@/lib/random';
 import { trackedExternalHref } from '@/lib/track';
+import { unstable_cache } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
+
+// The page stays dynamic (the pick depends on `?s=`), but the pool it picks
+// from doesn't: cache the 200-row read per (window, budget) in the Data Cache.
+// Uncached, this was one full Neon scan per spin — the same shape of query
+// that let an overnight crawler blow the transfer budget on /shows in May —
+// and /punt's "spin again" links are an unbounded URL space. `revalidateTag`
+// after each scrape refreshes it; the TTL is only a fallback.
+const cachedSearchShows = unstable_cache(searchShows, ['punt:pool'], {
+  revalidate: 21600,
+  tags: ['shows'],
+});
 export const metadata = {
   title: 'Take a punt · Theatre Scout',
   description:
@@ -69,7 +81,7 @@ export default async function PuntPage({
   let pool: Show[] = [];
   let error: string | null = null;
   try {
-    const result = await searchShows({
+    const result = await cachedSearchShows({
       date_from: from,
       date_to: to,
       max_price: maxPrice,

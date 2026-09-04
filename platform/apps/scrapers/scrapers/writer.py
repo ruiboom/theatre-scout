@@ -6,8 +6,9 @@ price_min_pence/price_max_pence). The translation lives only here so adapters
 never need to know what the DB column is called.
 
 `write_shows(slug, shows, replace=...)` is the per-venue write. With
-`replace=True` it preserves prior `first_seen_at` keyed by `booking_url` so the
-"new shows" query keeps working when a bespoke adapter changes title shape.
+`replace=True` it deletes rows that dropped off the listing and upserts the
+rest in place (stable ids, honest `updated_at`), preserving prior
+`first_seen_at` keyed by `booking_url` for any row it has to re-create.
 """
 
 from __future__ import annotations
@@ -107,12 +108,17 @@ def upsert_theatres(
 
 
 def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> int:
-    """Insert shows for a single theatre.
+    """Upsert shows for a single theatre.
 
-    With `replace=True`, the existing rows for the venue are wiped first so that
-    titles which dropped off the listings page disappear from the database too.
-    Prior `first_seen_at` is preserved keyed by booking URL so a re-titled
-    bespoke adapter doesn't reset the "new this week" signal.
+    With `replace=True`, rows that are no longer on the venue's listing are
+    deleted so titles which dropped off the site disappear from the database
+    too. Rows that ARE still listed are updated in place rather than deleted
+    and re-inserted: they keep their `id`, `first_seen_at` and — thanks to the
+    content-aware `shows_updated_at` trigger — their `updated_at` unless
+    something visible changed. (The old wipe-and-rewrite stamped every show as
+    modified daily, which the sitemap dutifully reported and every crawler
+    dutifully re-crawled — see migration 0007.) Prior `first_seen_at` is still
+    preserved keyed by booking URL for the rare row that has to be re-created.
     """
     written = 0
     shows = list(shows)
@@ -123,13 +129,12 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
             return 0
 
         # Guard against a transient empty scrape wiping a venue under --replace.
-        # `--replace` deletes the venue's rows before inserting the fresh set; if
-        # the adapter found nothing this run (a site blip / anti-bot hiccup during
-        # the daily run), deleting would blank the venue on the live site until
-        # the next good scrape. Keep the last-known-good rows instead — the next
-        # successful run refreshes them, and the venue-health monitor still flags
-        # the zero so it's visible. A genuine emptying is harmless: those rows
-        # have past end_dates and drop out of the date-filtered listings anyway.
+        # If the adapter found nothing this run (a site blip / anti-bot hiccup
+        # during the daily run), deleting would blank the venue on the live site
+        # until the next good scrape. Keep the last-known-good rows instead — the
+        # next successful run refreshes them, and the venue-health monitor still
+        # flags the zero so it's visible. A genuine emptying is harmless: those
+        # rows have past end_dates and drop out of the date-filtered listings.
         if replace and not shows:
             existing = _count_shows(cur, venue_id)
             if existing:
@@ -141,86 +146,115 @@ def write_shows(theatre_slug: str, shows: Iterable[Show], *, replace: bool) -> i
                 )
             return 0
 
-        prior_first_seen: dict[str, str] = {}
-        if replace:
-            prior_first_seen = _first_seen_by_url(cur, venue_id)
-            cur.execute("DELETE FROM shows WHERE venue_id = %s", (venue_id,))
-
         # Dedupe within a single run by slug. Adapters occasionally emit
         # near-duplicates (e.g. nav links matched as cards) that all collapse
         # to the same slug after URL hashing — first one wins.
+        unique: list[tuple[str, Show]] = []
         seen_slugs: set[str] = set()
         for s in shows:
             slug = _slug_for(s)
             if slug in seen_slugs:
                 continue
             seen_slugs.add(slug)
+            unique.append((slug, s))
+
+        prior_first_seen: dict[str, str] = {}
+        if replace:
+            prior_first_seen = _first_seen_by_url(cur, venue_id)
+            # Only rows that fell off the listing go. Everything still listed is
+            # upserted below and keeps its identity.
             cur.execute(
-                """
-                INSERT INTO shows (
-                    slug, venue_id, title, show_type,
-                    description_short, description_full,
-                    price_min_pence, price_max_pence,
-                    start_date, end_date,
-                    duration_minutes, age_rating, content_warnings,
-                    image_url, booking_url,
-                    writer, director, cast_members,
-                    raw_data,
-                    first_seen_at, last_seen_at
-                ) VALUES (
-                    %s, %s, %s, %s,
-                    %s, %s,
-                    %s, %s,
-                    %s, %s,
-                    %s, %s, %s,
-                    %s, %s,
-                    %s, %s, %s,
-                    %s,
-                    COALESCE(%s, NOW()), NOW()
-                )
-                ON CONFLICT (venue_id, title, start_date) DO UPDATE SET
-                    description_short = EXCLUDED.description_short,
-                    description_full  = EXCLUDED.description_full,
-                    price_min_pence   = EXCLUDED.price_min_pence,
-                    price_max_pence   = EXCLUDED.price_max_pence,
-                    end_date          = EXCLUDED.end_date,
-                    duration_minutes  = EXCLUDED.duration_minutes,
-                    age_rating        = EXCLUDED.age_rating,
-                    content_warnings  = EXCLUDED.content_warnings,
-                    image_url         = EXCLUDED.image_url,
-                    booking_url       = EXCLUDED.booking_url,
-                    writer            = EXCLUDED.writer,
-                    director          = EXCLUDED.director,
-                    cast_members      = EXCLUDED.cast_members,
-                    raw_data          = EXCLUDED.raw_data,
-                    last_seen_at      = NOW()
-                """,
-                (
-                    slug,
-                    venue_id,
-                    s.title,
-                    s.show_type,
-                    s.description,  # short
-                    s.description_full or s.description,  # full ≥ short
-                    s.price_min,
-                    s.price_max,
-                    s.start_date,
-                    s.end_date,
-                    s.duration_minutes,
-                    s.age_rating,
-                    list(s.content_warnings),
-                    str(s.image_url) if s.image_url else None,
-                    str(s.url),
-                    s.writer,
-                    s.director,
-                    list(s.cast_members),
-                    json.dumps(s.raw),
-                    prior_first_seen.get(str(s.url)),
-                ),
+                "DELETE FROM shows WHERE venue_id = %s AND NOT (slug = ANY(%s))",
+                (venue_id, list(seen_slugs)),
             )
+
+        for slug, s in unique:
+            params = _insert_params(slug, venue_id, s, prior_first_seen)
+            try:
+                with conn.transaction():
+                    cur.execute(_UPSERT_SQL, params)
+            except psycopg.errors.UniqueViolation:
+                # The natural key (venue, title, start_date) moved — typically a
+                # date correction — but the slug (venue + title + year + URL
+                # hash) didn't, so the upsert tried to insert a second row with
+                # the same slug. Retire the old row and insert afresh; its
+                # first_seen_at survives via the URL-keyed map.
+                cur.execute(
+                    "DELETE FROM shows WHERE venue_id = %s AND slug = %s",
+                    (venue_id, slug),
+                )
+                cur.execute(_UPSERT_SQL, params)
             written += 1
         conn.commit()
     return written
+
+
+_UPSERT_SQL = """
+    INSERT INTO shows (
+        slug, venue_id, title, show_type,
+        description_short, description_full,
+        price_min_pence, price_max_pence,
+        start_date, end_date,
+        duration_minutes, age_rating, content_warnings,
+        image_url, booking_url,
+        writer, director, cast_members,
+        raw_data,
+        first_seen_at, last_seen_at
+    ) VALUES (
+        %s, %s, %s, %s,
+        %s, %s,
+        %s, %s,
+        %s, %s,
+        %s, %s, %s,
+        %s, %s,
+        %s, %s, %s,
+        %s,
+        COALESCE(%s, NOW()), NOW()
+    )
+    ON CONFLICT (venue_id, title, start_date) DO UPDATE SET
+        description_short = EXCLUDED.description_short,
+        description_full  = EXCLUDED.description_full,
+        price_min_pence   = EXCLUDED.price_min_pence,
+        price_max_pence   = EXCLUDED.price_max_pence,
+        end_date          = EXCLUDED.end_date,
+        duration_minutes  = EXCLUDED.duration_minutes,
+        age_rating        = EXCLUDED.age_rating,
+        content_warnings  = EXCLUDED.content_warnings,
+        image_url         = EXCLUDED.image_url,
+        booking_url       = EXCLUDED.booking_url,
+        writer            = EXCLUDED.writer,
+        director          = EXCLUDED.director,
+        cast_members      = EXCLUDED.cast_members,
+        raw_data          = EXCLUDED.raw_data,
+        last_seen_at      = NOW()
+"""
+
+
+def _insert_params(
+    slug: str, venue_id: str, s: Show, prior_first_seen: Mapping[str, str]
+) -> tuple[object, ...]:
+    return (
+        slug,
+        venue_id,
+        s.title,
+        s.show_type,
+        s.description,  # short
+        s.description_full or s.description,  # full >= short
+        s.price_min,
+        s.price_max,
+        s.start_date,
+        s.end_date,
+        s.duration_minutes,
+        s.age_rating,
+        list(s.content_warnings),
+        str(s.image_url) if s.image_url else None,
+        str(s.url),
+        s.writer,
+        s.director,
+        list(s.cast_members),
+        json.dumps(s.raw),
+        prior_first_seen.get(str(s.url)),
+    )
 
 
 def _slug_for(s: Show) -> str:

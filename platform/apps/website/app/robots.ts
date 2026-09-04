@@ -11,6 +11,8 @@ import { SITE_URL } from '@/lib/site';
  *   (its `?s=` "spin again" links are an infinite URL space — a classic crawl
  *   trap). `/shows?` filter permutations are blocked for the same reason while
  *   leaving the bare `/shows` index and `/shows/<slug>` pages crawlable.
+ *   `/shows-index` is the internal rewrite target for the bare `/shows`
+ *   (its canonical points back) — no reason to index the same page twice.
  *
  * robots.txt is advisory — well-behaved crawlers honour it; `middleware.ts`
  * hard-blocks the ones that don't.
@@ -21,7 +23,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/admin', '/r', '/punt', '/shows?'],
+        disallow: ['/api/', '/admin', '/r', '/punt', '/shows?', '/shows-index'],
         crawlDelay: 10,
       },
     ],

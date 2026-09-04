@@ -3,9 +3,10 @@ import { SITE_URL } from '@/lib/site';
 import { sitemapShows } from '@/lib/queries/shows';
 import { sitemapVenues } from '@/lib/queries/venues';
 
-// Regenerated hourly alongside the cached pages it points at. A DB hiccup
-// degrades to a static-pages-only sitemap rather than a 500.
-export const revalidate = 3600;
+// Purged on demand after each scrape (POST /api/v1/admin/revalidate); the TTL
+// is a daily fallback. A DB hiccup degrades to a static-pages-only sitemap
+// rather than a 500.
+export const revalidate = 86400;
 
 const STATIC_PATHS = [
   '',
@@ -31,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       entries.push({
         url: `${SITE_URL}/venues/${v.slug}`,
         lastModified: v.updated_at,
-        changeFrequency: 'daily',
+        changeFrequency: 'weekly',
         priority: 0.7,
       });
     }
@@ -44,8 +45,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const s of shows) {
       entries.push({
         url: `${SITE_URL}/shows/${s.slug}`,
+        // `updated_at` only moves when visible content changes (migration
+        // 0007) — it used to be re-stamped by every scrape, which told crawlers
+        // the whole site changed daily and they re-crawled the lot.
         lastModified: s.updated_at,
-        changeFrequency: 'daily',
+        changeFrequency: 'weekly',
         priority: 0.5,
       });
     }

@@ -186,8 +186,35 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER venues_updated_at BEFORE UPDATE ON venues
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+-- shows: only bump on visible content changes (last_seen_at / raw_data
+-- housekeeping from the daily scrape must not move it — the sitemap's
+-- <lastmod> reads it). See migrations/0007_shows_updated_at_content_only.sql.
+CREATE OR REPLACE FUNCTION set_shows_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+    IF ROW(NEW.slug, NEW.venue_id, NEW.title, NEW.show_type,
+           NEW.description_short, NEW.description_full,
+           NEW.price_min_pence, NEW.price_max_pence,
+           NEW.start_date, NEW.end_date, NEW.duration_minutes, NEW.age_rating,
+           NEW.content_warnings, NEW.image_url, NEW.booking_url,
+           NEW.writer, NEW.director, NEW.cast_members, NEW.reviews_summary)
+       IS NOT DISTINCT FROM
+       ROW(OLD.slug, OLD.venue_id, OLD.title, OLD.show_type,
+           OLD.description_short, OLD.description_full,
+           OLD.price_min_pence, OLD.price_max_pence,
+           OLD.start_date, OLD.end_date, OLD.duration_minutes, OLD.age_rating,
+           OLD.content_warnings, OLD.image_url, OLD.booking_url,
+           OLD.writer, OLD.director, OLD.cast_members, OLD.reviews_summary)
+    THEN
+        NEW.updated_at = OLD.updated_at;
+        RETURN NEW;
+    END IF;
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER shows_updated_at BEFORE UPDATE ON shows
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    FOR EACH ROW EXECUTE FUNCTION set_shows_updated_at();
 
 -- ----------------------------------------------------------------------------
 -- venue_health (observability) — see migrations/0004_venue_health_view.sql

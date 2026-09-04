@@ -232,22 +232,19 @@ export async function searchShows(
 
   const orderBy = orderByFor(input.sort, input.dir);
 
-  const rows = (await sql<ShowRow[]>`
-    SELECT ${showColumns}
+  // One round trip: the window count rides along with the page of rows. (It
+  // used to be a second, identical-filter COUNT query — with Neon a continent
+  // away from the function that's a full extra RTT on every uncached call.)
+  // There's no offset param, so an empty page always means total = 0.
+  const rows = (await sql<(ShowRow & { total: number })[]>`
+    SELECT ${showColumns}, COUNT(*) OVER()::int AS total
       FROM shows s
       JOIN venues v ON v.id = s.venue_id
      WHERE ${filters}
      ORDER BY ${orderBy}
      LIMIT ${limit}
-  `) as ShowRow[];
-
-  const countRows = await sql<{ count: number }[]>`
-    SELECT COUNT(*)::int AS count
-      FROM shows s
-      JOIN venues v ON v.id = s.venue_id
-     WHERE ${filters}
-  `;
-  const total = countRows[0]?.count ?? 0;
+  `) as (ShowRow & { total: number })[];
+  const total = rows[0]?.total ?? 0;
 
   return { shows: rows.map(rowToShow), total };
 }

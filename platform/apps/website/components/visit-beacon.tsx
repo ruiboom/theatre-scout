@@ -1,38 +1,43 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
 /**
- * Client-side visit beacon.
+ * Client-side analytics beacon.
  *
- * Public pages are now CDN-cached (ISR), so the old server-side `trackEvent`
- * on render only fired when a page regenerated — not per visit. This posts one
- * `visit` event per client navigation instead. Two happy side-effects:
- *   1. non-JS crawlers (most of them) never run this, so they no longer inflate
- *      the events table or pin the Neon endpoint awake; and
- *   2. visit counts now reflect real browsers rather than bot traffic.
- * The `/api/v1/events` handler still drops any UA that looks like a bot.
+ * Page views are Vercel Analytics' job (see `<Analytics />` in the layout).
+ * This used to also POST a `visit` event per navigation into our own events
+ * table — one function invocation plus one Neon INSERT per page view, which
+ * both cost money and kept the Neon endpoint from ever autosuspending. That's
+ * gone; only the signal Vercel Analytics can't give us is recorded here: the
+ * free-text search term on /shows. Outbound clicks still go through `/r`.
+ *
+ * Because this reads the query string it must sit inside a <Suspense>
+ * boundary (the layout does that) so it doesn't drag static pages into
+ * client-side rendering.
  */
-export function VisitBeacon() {
+export function SearchBeacon() {
   const pathname = usePathname();
+  const params = useSearchParams();
+  const q = pathname === '/shows' ? (params.get('q') ?? '').trim() : '';
   const last = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!pathname || last.current === pathname) return;
-    last.current = pathname;
+    if (!q || last.current === q) return;
+    last.current = q;
     try {
       // keepalive lets the POST outlive a fast navigation away from the page.
       void fetch('/api/v1/events', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ type: 'visit', path: pathname }),
+        body: JSON.stringify({ type: 'search', query: q.slice(0, 500) }),
         keepalive: true,
       });
     } catch {
       /* analytics is best-effort — never let it surface to the user */
     }
-  }, [pathname]);
+  }, [q]);
 
   return null;
 }

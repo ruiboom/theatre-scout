@@ -3,7 +3,20 @@ import './globals.css';
 import { lastScrapeAt } from '@/lib/queries/venues';
 import { fmtRelative } from '@/lib/format';
 import { Analytics } from '@vercel/analytics/next';
-import { VisitBeacon } from '@/components/visit-beacon';
+import { Suspense } from 'react';
+import { unstable_cache } from 'next/cache';
+import { SearchBeacon } from '@/components/visit-beacon';
+
+// The layout renders on every dynamic request (/shows filters, /punt), and
+// this one-row query was a Neon round trip each time. Cache it; the scrape
+// workflow's revalidate call refreshes it the moment new data lands. The TTL
+// must be >= the pages' own ISR TTL: Next takes the SMALLEST revalidate in the
+// render tree as the route's, so a 10-minute value here would silently turn
+// every 6-hour page into a 10-minute one.
+const cachedLastScrapeAt = unstable_cache(lastScrapeAt, ['layout:last-scrape'], {
+  revalidate: 21600,
+  tags: ['shows'],
+});
 
 export const metadata: Metadata = {
   title: {
@@ -23,7 +36,7 @@ export default async function RootLayout({
   // in dev so the page still renders without a working connection.
   let last: string | null = null;
   try {
-    last = await lastScrapeAt();
+    last = await cachedLastScrapeAt();
   } catch {
     last = null;
   }
@@ -71,7 +84,9 @@ export default async function RootLayout({
           </div>
         </footer>
         <Analytics />
-        <VisitBeacon />
+        <Suspense fallback={null}>
+          <SearchBeacon />
+        </Suspense>
       </body>
     </html>
   );

@@ -30,7 +30,12 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Run on everything except Next internals and static assets — no point paying
-  // the edge hop for /_next/* or the favicon.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Run on pages and the API only — every match is a billed edge invocation,
+  // so skip Next internals, robots/sitemap (crawlers we WANT read those), and
+  // anything with a file extension (static assets). The eventual replacement
+  // is a Vercel Firewall custom rule with the same UA list, which costs
+  // nothing per request; see platform/MANAGEMENT_PLAYBOOK.md.
+  matcher: [
+    '/((?!_next/|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.[a-zA-Z0-9]{2,5}$).*)',
+  ],
 };

@@ -12,32 +12,41 @@ import {
   WEEKDAY_HEADERS,
   type DayCell,
 } from '@/lib/calendar';
-import { trackEvent, trackedExternalHref } from '@/lib/track';
-import { sampleRandom } from '@/lib/random';
-import { headers } from 'next/headers';
+import { trackedExternalHref } from '@/lib/track';
+import { hourlySeed, sampleSeeded } from '@/lib/random';
 import { unstable_cache } from 'next/cache';
 
-// Stays dynamic: the listing is driven by the filter query string, so it can't
-// be cached by path. Per-visit tracking moved to <VisitBeacon> (client-side);
-// only the search-term signal is recorded here, and only for real users.
-export const dynamic = 'force-dynamic';
-
-// ...but each render runs a heavy `searchShows` (up to 200 rows). An overnight
-// bot hammering this one page ~164k times was the bulk of the Neon transfer
-// blowout. The page must stay dynamic, but its DB reads don't: cache them in the
-// Data Cache, keyed by the resolved query args, so identical filter URLs (the
-// common case — and what a repeat crawler hits) collapse to one Neon query per
-// hour instead of one per request. `robots.txt` already disallows `/shows?`
-// filter permutations; this caps the cost of any that slip through. `unstable_
-// cache` works inside a force-dynamic route — it caches the data, not the page.
+/**
+ * The /shows listing, shared by two routes:
+ *
+ *   - `app/shows/page.tsx` — the filtered listing. Driven by the query string,
+ *     so it's `force-dynamic` and rendered per request.
+ *   - `app/shows-index/page.tsx` — the bare `/shows` (no filters), which
+ *     `next.config.ts` rewrites here. No query string → ISR, served from the
+ *     CDN. This is the page in the nav and the one crawlers are allowed on, so
+ *     it's the bulk of /shows traffic — and it no longer costs a function
+ *     invocation per hit.
+ *
+ * Each render runs a heavy `searchShows` (up to 200 rows). An overnight bot
+ * hammering this page ~164k times was the bulk of the May Neon transfer
+ * blowout, so the DB reads live in the Data Cache keyed by the resolved query
+ * args: identical filter URLs (the common case — and what a repeat crawler
+ * hits) collapse to one Neon query per TTL. The scrape workflow's revalidate
+ * call refreshes them; the TTL is a fallback. `robots.txt` disallows `/shows?`
+ * filter permutations; this caps the cost of any that slip through.
+ *
+ * Nothing in here may read request headers or cookies — that would drag the
+ * ISR route back to dynamic. Search-term tracking is client-side
+ * (`<SearchBeacon>` in the layout) for exactly that reason.
+ */
 const cachedSearchShows = unstable_cache(searchShows, ['shows-index:search'], {
-  revalidate: 3600,
+  revalidate: 21600,
   tags: ['shows'],
 });
 const cachedOpeningsByDay = unstable_cache(
   openingsByDay,
   ['shows-index:openings'],
-  { revalidate: 3600, tags: ['shows'] },
+  { revalidate: 21600, tags: ['shows'] },
 );
 
 const CATEGORIES: Array<{ key: VenueCategory; label: string }> = [
@@ -68,8 +77,6 @@ const SHOW_TYPE_RAILS: Array<{ key: ShowType; label: string }> = [
 ];
 const RAIL_PICK_LIMIT = 4;
 
-type Search = Record<string, string | string[] | undefined>;
-
 function pickStr(v: string | string[] | undefined): string {
   if (Array.isArray(v)) return v[0] ?? '';
   return v ?? '';
@@ -89,20 +96,10 @@ function buildChipUrl(current: Record<string, string>, changes: Record<string, s
   return '/shows?' + new URLSearchParams(cleaned).toString();
 }
 
-export default async function ShowsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Search>;
-}) {
-  const sp = await searchParams;
-  const q = pickStr(sp.q);
+export type Search = Record<string, string | string[] | undefined>;
 
-  // Search tracking, fire-and-forget. Pass the UA so `trackEvent` can drop
-  // crawlers; the page visit itself is logged client-side by <VisitBeacon>.
-  if (q) {
-    const ua = (await headers()).get('user-agent');
-    void trackEvent({ type: 'search', query: q, ua });
-  }
+export async function ShowsListing({ sp }: { sp: Search }) {
+  const q = pickStr(sp.q);
   const filterType = pickStr(sp.type);
   const filterCat = pickStr(sp.cat) as '' | VenueCategory;
   const filterWhen = pickStr(sp.when); // '', 'today', 'week', 'new', 'closing'
@@ -237,6 +234,9 @@ export default async function ShowsPage({
   const carry = Object.entries(current).filter(([k, v]) => v && k !== 'q');
 
   // Bucket into rails for the rails view: by show type first, then by venue tier.
+  // Picks are seeded by the hour: the same slice for everyone within the hour
+  // (so the ISR render is honest and cacheable), a fresh one the next.
+  const seed = hourlySeed();
   const typeRails = SHOW_TYPE_RAILS.map(({ key, label }) => {
     const inType = shows.filter((s) => s.show_type === key);
     return {
@@ -244,7 +244,7 @@ export default async function ShowsPage({
       key,
       label,
       total: inType.length,
-      picks: sampleRandom(inType, RAIL_PICK_LIMIT),
+      picks: sampleSeeded(inType, RAIL_PICK_LIMIT, seed),
     };
   });
   const categoryRails = CATEGORIES.map(({ key, label }) => {
@@ -254,7 +254,7 @@ export default async function ShowsPage({
       key,
       label,
       total: inCat.length,
-      picks: sampleRandom(inCat, RAIL_PICK_LIMIT),
+      picks: sampleSeeded(inCat, RAIL_PICK_LIMIT, seed + 1),
     };
   });
   const rails = [...typeRails, ...categoryRails];

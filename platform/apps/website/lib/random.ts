@@ -1,8 +1,10 @@
 /**
  * Random helpers shared across pages.
  *
- * `sampleRandom` is the unseeded shuffle-and-take used by the /shows rails — a
- * different slice each load. `pickOne` is seeded (mulberry32) so a result is
+ * `sampleRandom` is the unseeded shuffle-and-take. `sampleSeeded` is its
+ * deterministic sibling, used by the /shows rails with an hourly seed so the
+ * render is stable within the hour (and therefore CDN-cacheable) while still
+ * rotating through the day. `pickOne` is seeded (mulberry32) so a result is
  * reproducible from a URL: the /punt page uses it so a punt link is shareable
  * and "Spin again" is just the next seed.
  */
@@ -16,6 +18,21 @@ export function sampleRandom<T>(arr: T[], n: number): T[] {
     [copy[i], copy[j]] = [copy[j]!, copy[i]!];
   }
   return copy.slice(0, take);
+}
+
+/**
+ * Pick up to `n` items from `arr`, deterministically for a given `seed`.
+ * Same input + same seed → same picks, so a page using it can be cached.
+ */
+export function sampleSeeded<T>(arr: T[], n: number, seed: number): T[] {
+  const take = Math.min(n, arr.length);
+  const order = shuffledIndices(arr.length, seed);
+  return order.slice(0, take).map((i) => arr[i]!);
+}
+
+/** Seed that changes once an hour — what the /shows rails rotate on. */
+export function hourlySeed(now: number = Date.now()): number {
+  return Math.floor(now / 3_600_000);
 }
 
 /** Deterministic PRNG (mulberry32). Same seed → same sequence. */

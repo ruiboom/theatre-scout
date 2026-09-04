@@ -5,7 +5,7 @@ import { pad3 } from '@/lib/format';
 // CDN-cached and refreshed hourly instead of re-querying Neon on every hit
 // (was force-dynamic; crawlers were hammering the DB). Visits are tracked
 // client-side via <VisitBeacon> in the layout.
-export const revalidate = 3600;
+export const revalidate = 21600;
 
 export default async function HomePage() {
   let venues: Awaited<ReturnType<typeof listVenuesWithCounts>> = [];

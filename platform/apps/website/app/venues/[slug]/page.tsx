@@ -10,7 +10,7 @@ import { trackedExternalHref } from '@/lib/track';
 // from the CDN, not Neon (was force-dynamic). Visits tracked client-side via
 // <VisitBeacon> in the layout — `topVenueClicks` keys off the `/venues/<slug>`
 // path it records, so the admin metric is unaffected.
-export const revalidate = 3600;
+export const revalidate = 21600;
 // See shows/[slug]: unknown slugs render on demand + cache rather than 404.
 export const dynamicParams = true;
 

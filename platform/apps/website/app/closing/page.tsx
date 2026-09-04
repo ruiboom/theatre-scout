@@ -5,7 +5,7 @@ import { londonToday } from '@/lib/time';
 
 // ISR — daily data; cache the render and refresh hourly (was force-dynamic).
 // Visits tracked client-side via <VisitBeacon> in the layout.
-export const revalidate = 3600;
+export const revalidate = 21600;
 export const metadata = {
   title: 'Closing soon · Theatre Scout',
   description:

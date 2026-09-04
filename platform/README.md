@@ -123,17 +123,23 @@ Reasoning for each choice lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## 4. Application: `apps/website` (Next.js)
 
 Hosts everything humans see and most of what machines see. Single Next.js
-project, App Router. **Content pages are ISR-cached** (`revalidate = 3600`): the
-home index, the `/new` and `/closing` feeds, and every `/shows/[slug]` /
-`/venues/[slug]` detail page are rendered once and served from Vercel's CDN,
-regenerating hourly — the data only changes on the daily scrape, so a DB read
-per request was pure waste (and let overnight crawlers blow Neon's transfer
-budget). Pages that are inherently query-driven (`/shows` with filters,
-`/punt`) and all `/admin` and `POST` routes stay `force-dynamic` — but `/shows`
-wraps its heavy DB reads in `unstable_cache` (the Data Cache) so a flood of
-repeated filter URLs collapses to one Neon query per hour rather than one per
-render (this page, hammered ~164k times in a night, was what blew the transfer
-budget). The read-only GET API routes carry a short `s-maxage`
+project, App Router. **Content pages are ISR-cached and purged on demand**: the
+home index, the bare `/shows` index, the `/new` and `/closing` feeds, and every
+`/shows/[slug]` / `/venues/[slug]` detail page are rendered once and served
+from Vercel's CDN. The data only changes on the daily scrape, so the scrape
+workflow calls `POST /api/v1/admin/revalidate` when it finishes and every page
+regenerates on its next hit; the `revalidate = 21600` (6 h) on each page is a
+fallback, not the refresh mechanism (a DB read per request was pure waste, and
+let overnight crawlers blow Neon's transfer budget). The bare `/shows` gets
+there via a `next.config.ts` rewrite to `app/shows-index` (ISR) whenever none
+of the filter params are present; `/shows?…` with filters and `/punt` are
+inherently query-driven and stay `force-dynamic`, as do `/admin` and the `POST`
+routes — but their DB reads sit in `unstable_cache` (the Data Cache, tag
+`shows`) so a flood of repeated URLs collapses to one Neon query per purge
+rather than one per render (`/shows`, hammered ~164k times in a night, was
+what blew the transfer budget). The read-only GET API routes carry a short
+`s-maxage`. Functions are pinned to `lhr1` (`vercel.json`) so they sit next to
+Neon in London rather than a transatlantic round trip away
 (see [§9](#9-cross-cutting-design-decisions)).
 
 ### 4.1 Routes
@@ -143,7 +149,7 @@ budget). The read-only GET API routes carry a short `s-maxage`
 | Path | Purpose |
 |------|---------|
 | `GET /` | Home — venue index + hero stats |
-| `GET /shows` | Show index — filters (time window, type, tier, sort), rails + list, search |
+| `GET /shows` | Show index — filters (time window, type, tier, sort), rails + list, search. Bare `/shows` is rewritten to the ISR `/shows-index` route; filtered URLs render dynamically |
 | `GET /shows/[slug]` | Show detail — performances, creators, content warnings, book tickets |
 | `GET /venues/[slug]` | Venue detail — Leaflet map, current shows, box office link |
 | `GET /about` | Static |
@@ -155,7 +161,7 @@ budget). The read-only GET API routes carry a short `s-maxage`
 | Path | Purpose |
 |------|---------|
 | `GET /admin/login` | Password form. Server action `attemptLogin(formData)` does timing-safe compare against SHA-256 of `ADMIN_PASSWORD`. |
-| `GET /admin` | Dashboard — visit totals, top searches, top venue clicks, top outbound clicks, last scrape status. Button calls server action `triggerRefresh()`. |
+| `GET /admin` | Dashboard — top searches, top venue clicks, top outbound clicks, last scrape status (the visit counters are legacy — page views live in Vercel Analytics since Sept 2026). Buttons call server actions `triggerRefresh()` and `purgeCache()`. |
 
 Session = signed cookie `ts_admin` (HTTP-only, 14-day max-age, Lax SameSite, Secure in production).
 
@@ -171,8 +177,9 @@ Every endpoint validates input with the zod schemas from `@platform/shared`.
 | `GET /api/v1/venues/{id_or_slug}?include_shows=true` | `get_venue` | Optional `current_shows[]`. |
 | `GET /api/v1/whats-on` | `whats_on` | `when=tonight\|tomorrow\|this_weekend\|next_weekend\|this_week`, optional `near` (string or `{lat,lng}`), `max_price`. Time windows resolved in `Europe/London`. |
 | `POST /api/v1/recommend` | `recommend_shows` | Body `{ vibe, constraints?, exclude_genres?, limit? }`. Currently token-overlap; LLM-backed once `ANTHROPIC_API_KEY` wired. |
-| `POST /api/v1/events` | — | Analytics `{ type, path?, target?, query? }`. The client `<VisitBeacon>` posts one `visit` per navigation here (page renders are cached, so visits can't be counted server-side anymore). Bot UAs are dropped — see `lib/track.ts#isBot`. |
+| `POST /api/v1/events` | — | Analytics `{ type, path?, target?, query? }`. The client `<SearchBeacon>` posts a `search` event for `/shows?q=` here; page views are Vercel Analytics' job (the old per-visit POST cost a function call + a Neon INSERT per page view and kept Neon awake). Bot UAs are dropped — see `lib/track.ts#isBot`. |
 | `POST /api/v1/admin/refresh` | — | Admin-only. Dispatches `scrape.yml` via GitHub REST API. |
+| `POST /api/v1/admin/revalidate` | — | Purges every cached page + Data Cache entry. Admin cookie, or a GitHub Actions OIDC token from this repo's `main` (the scrape workflow calls it after writing). |
 | `GET /api/openapi` | — | OpenAPI 3.0 export consumed by the Custom GPT. |
 | `GET /r?type=outbound&target=<slug>&to=<url>` | — | Tracked redirect. Records outbound event, validates `to` is `http(s)://`, 302s. |
 
@@ -596,7 +603,10 @@ const params = SearchShowsInput.parse(Object.fromEntries(req.nextUrl.searchParam
 | Auth | single password, SHA-256 cookie | no user management; admin is one person |
 | MCP isolation | wrapper-only, no DB access | API is source of truth; website + MCP can never diverge |
 | API versioning | `/api/v1/*` from day one | breaking changes go to `/v2` |
-| Caching | ISR (`revalidate=3600`) on content pages; `s-maxage=300` on read-only GET APIs; `force-dynamic` only where query-driven | the original "everything fresh per request" let overnight crawlers blow Neon's transfer budget — the data only changes daily, so cache it |
+| Caching | ISR on content pages (6 h fallback TTL) **purged on demand by the scrape workflow**; Data Cache (tag `shows`) under every dynamic read; `s-maxage=300` on read-only GET APIs; `force-dynamic` only where query-driven | the original "everything fresh per request" let overnight crawlers blow Neon's transfer budget — the data only changes daily, so cache it and expire it exactly once, when it changes |
+| Function region | `lhr1` (London), pinned in `apps/website/vercel.json` | Neon is in `eu-west-2`; the default `iad1` put a transatlantic round trip on every query |
+| `updated_at` on shows | only moves on visible content changes (trigger, migration 0007); the scraper upserts in place instead of wipe-and-rewrite | the sitemap's `<lastmod>` reads it — when every scrape re-stamped every row, crawlers re-fetched all ~1,400 show pages daily |
+| Page-view analytics | Vercel Analytics; our `events` table keeps only `search` + `outbound` | a per-visit function call + Neon INSERT was the one thing keeping Neon from ever autosuspending |
 | Bot handling | `robots.txt` + sitemap; `middleware.ts` 403s a curated list of abusive crawlers; bot UAs dropped from analytics | crawlers were the bulk of overnight load; caching neutralises cost, this trims the rest |
 | Search | Postgres FTS (tsvector, GIN) + pg_trgm | no separate search service; fuzzy venue lookup works |
 | Geo | PostGIS `GEOGRAPHY(POINT, 4326)` + `ST_DWithin` | one-line "within X km of London Bridge" |

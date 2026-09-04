@@ -78,6 +78,7 @@ Every page is `force-dynamic` — no ISR, no edge caching. Each request hits Neo
 - **Build command:** `pnpm --filter website build` or the Next.js default if root directory is set correctly.
 - **Output:** `.next` (default).
 - **Node version:** controlled by `.nvmrc` at `platform/.nvmrc`.
+- **Function region:** `lhr1` (London), pinned by `apps/website/vercel.json` — Neon lives in `eu-west-2`, and the default `iad1` cost a transatlantic round trip per query. Confirm under **Settings → Functions → Function Region** after the first deploy that carries the file; the dashboard value must not disagree with it.
 
 ### 1.4 Environment variables (Production)
 
@@ -100,6 +101,7 @@ Preview environments can share the same values, or use a read-only Neon branch �
 - **Hobby tier** ($0/mo) is what the project ships on. Hobby is non-commercial; if monetised, upgrade to Pro ($20/mo per member).
 - Bandwidth and function execution limits on Hobby: 100 GB bandwidth, 100 GB-hours function execution. Easy to stay under at current traffic.
 - Watch the **Usage** tab in the Vercel dashboard.
+- What actually drives usage here (Sept 2026 audit): function *duration* (every DB-touching render), ISR regenerations (crawlers re-fetching show pages), and edge-middleware invocations. See §1.8 for the controls and what's left to do in the dashboard.
 
 ### 1.6 Operations
 
@@ -117,6 +119,29 @@ Preview environments can share the same values, or use a read-only Neon branch �
 - **502 / function timeout:** Neon connection pool exhausted, or a slow query. Check Neon dashboard for active connections; verify `DATABASE_URL` is the pooled URL.
 - **"0 shows" on the homepage:** DB is empty or scraper is failing. Check `/admin` for scrape status, or GitHub Actions runs.
 - **Refresh button does nothing:** `GITHUB_TOKEN` missing or wrong scope. See §5.
+- **Pages show yesterday's data hours after the scrape:** the workflow's "Purge the site cache" step failed (check the run log — it warns rather than fails). Press **Purge page cache** on `/admin`. Pages also refresh on their 6 h fallback TTL regardless.
+- **`/shows` is a function invocation on every hit again** (`x-vercel-cache: MISS`, `cache-control: private`): the `next.config.ts` rewrite to `/shows-index` isn't matching. Every filter key the listing reads must be in `SHOWS_FILTER_KEYS`; a request carrying any of them is meant to fall through to the dynamic route.
+
+### 1.8 Cost controls
+
+What the code already does (all landed Sept 2026, see `platform/README.md` §4 and §9):
+
+- Functions pinned to `lhr1` next to Neon.
+- ISR pages: 6 h fallback TTL, **purged on demand** by the scrape workflow via `POST /api/v1/admin/revalidate` (GitHub OIDC-authenticated, no shared secret). Sitemap 24 h.
+- Bare `/shows` is an ISR page (`app/shows-index`, hourly-seeded rails); `/punt` and the layout's scrape stamp read from the Data Cache.
+- `shows.updated_at` only moves on real content changes, so the sitemap's `<lastmod>` stops inviting a full daily recrawl.
+- No per-visit DB write: page views are Vercel Analytics' job.
+- `searchShows` is one query (window count) instead of two.
+- Middleware skips static files, robots and sitemap.
+
+Still dashboard-only — do these by hand:
+
+| Where | What | Why |
+|-------|------|-----|
+| Vercel → Settings → Functions | Confirm **Function Region = London (lhr1)** | `vercel.json` sets it; make sure nothing overrides it. |
+| Vercel → Firewall → Custom rules | Add a **Deny** rule: `User Agent contains` each name in `middleware.ts#BLOCKED_UA`. Then delete `middleware.ts`. | Firewall rules run before any function and cost nothing per request; edge middleware is a billed invocation on every page and API hit. |
+| Neon → project → Compute | **Autosuspend** on, at the shortest delay the plan allows (5 min on Free); **min compute 0.25 CU** | With the per-visit writes and hourly regenerations gone, the endpoint can actually sleep overnight. Watch the compute-hours graph for a week after deploying. |
+| Vercel → Analytics | Confirm page views are arriving | `/admin`'s visit counters stop growing from this deploy on — by design. |
 
 ---
 
@@ -162,7 +187,7 @@ The free tier covers a handful of branches and the working set we use. Branch li
 ### 2.5 Pricing
 
 - **Free tier** — 0.5 GB storage, 1 always-on compute, autosuspends after inactivity. Comfortable headroom for this project.
-- Cost spikes typically come from **compute hours** when something stays connected. The scrapers run for ~17 minutes a day; the website on Vercel uses the pooler so connections are short-lived. Both are fine.
+- Cost spikes typically come from **compute hours** when something stays connected — or, subtler, when *something* queries inside every autosuspend window so the endpoint never sleeps. Before Sept 2026 that was the case around the clock: a Neon INSERT per human page view, hourly ISR regenerations across ~1,500 pages driven by crawlers, and `/punt` reading 200 rows per spin. All three are gone (see Vercel §1.8); the scrapers' ~17 minutes a day is the only *scheduled* load.
 - Storage is small — show data + events table at current write rate stays well under 100 MB.
 
 ### 2.6 Operations
@@ -314,7 +339,7 @@ The workflow:
 
 - **Name:** "Daily scrape"
 - **Concurrency:** `group: scrape, cancel-in-progress: false` — overlapping runs queue rather than collide.
-- **Permissions:** `contents: read` only (no write back to the repo).
+- **Permissions:** `contents: read`, `issues: write` (health issue), `id-token: write` (OIDC token for the site-cache purge). Nothing writes back to the repo.
 - **Working dir:** `platform/apps/scrapers` (the Python ingestion package).
 - **Runner:** `ubuntu-latest`, 45-minute timeout.
 - **Cache:** Patchright/Chromium at `~/.cache/ms-playwright` (key `playwright-${{ runner.os }}-v1`) — the 250 MB Chromium download is paid once until the cache is invalidated.
@@ -328,7 +353,10 @@ Steps (in order):
 5. `uv run scrapling install` (Chromium)
 6. `uv run scrape sync-venues ../../../theatres.yaml`
 7. `uv run scrape all --enrich --replace --workers 16`
-8. Smoke test (only if `vars.SITE_BASE_URL` is set): `curl "$SITE_BASE_URL/api/v1/shows?limit=1"` and assert `total > 100`.
+8. Purge the site cache (only if `vars.SITE_BASE_URL` is set): mints a GitHub OIDC token (audience `theatre-scout-revalidate`) and `POST`s it to `$SITE_BASE_URL/api/v1/admin/revalidate`. The site verifies it against GitHub's JWKS and requires `repository = ruiboom/theatre-scout`, `ref = refs/heads/main`. Advisory — a failure warns; pages then refresh on their 6 h TTL.
+9. Prune analytics events older than 90 days.
+10. Smoke test (only if `vars.SITE_BASE_URL` is set): `curl "$SITE_BASE_URL/api/v1/shows?limit=1"` and assert `total > 100`.
+11. Venue health check → rolling GitHub issue.
 
 Typical wall time: ~17 minutes. Data is current by 05:20 UTC.
 
@@ -483,7 +511,7 @@ To attach another custom domain (e.g. `anywherebutwestend.com`):
 
 ### Weekly
 
-- Skim `/admin` — visit trends, top searches.
+- Skim `/admin` — top searches, outbound clicks; page views are in Vercel → Analytics.
 - Check Vercel Usage tab — bandwidth + function execution.
 
 ### Monthly

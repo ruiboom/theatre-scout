@@ -45,7 +45,7 @@ def scrape_venue(
     slug: str,
     enrich: bool = typer.Option(False, "--enrich", help="Fetch each show's detail page."),
     replace: bool = typer.Option(
-        False, "--replace", help="Wipe existing rows for this venue first."
+        False, "--replace", help="Delete rows that dropped off this venue's listing."
     ),
     workers: int = typer.Option(1, "--workers", help="Parallel workers for the enrich step."),
 ) -> None:
@@ -61,7 +61,9 @@ def scrape_venue(
 @app.command("all")
 def scrape_all(
     enrich: bool = typer.Option(False, "--enrich", help="Fetch each show's detail page."),
-    replace: bool = typer.Option(False, "--replace", help="Wipe existing rows per venue first."),
+    replace: bool = typer.Option(
+        False, "--replace", help="Delete rows that dropped off each venue's listing."
+    ),
     workers: int = typer.Option(1, "--workers", help="Parallel workers for the enrich step."),
 ) -> None:
     """Scrape every registered adapter (3-phase pipeline)."""
